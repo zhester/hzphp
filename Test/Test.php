@@ -9,13 +9,20 @@ namespace hzphp\Test;
 abstract class Test {
 
 
-    abstract public function reset(
-        Environment $env
-    );
+    /**
+     *  Reset the test's internal state
+     */
+    abstract public function reset();
 
 
+    /**
+     *  Run the test script
+     *
+     *  @param report   The test report generator
+     *  @param v        The test verification system
+     */
     abstract public function run(
-        Environment $env,
+        Report $report,
         Verifier $v
     );
 
