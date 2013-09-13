@@ -19,11 +19,11 @@ abstract class Test {
      *  Run the test script
      *
      *  @param report   The test report generator
-     *  @param v        The test verification system
+     *  @param verify   The test verification system
      */
     abstract public function run(
         Report $report,
-        Verifier $v
+        Verifier $verify
     );
 
 }

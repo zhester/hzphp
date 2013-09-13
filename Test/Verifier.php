@@ -82,16 +82,18 @@ class Verifier {
 
         $exp = $this->info( $expected    );
         $act = $this->info( $actual      );
+        $tol = $this->info( $tolerance   );
         $upr = $this->info( $upper_limit );
         $lwr = $this->info( $lower_limit );
 
         $this->executor->report->table(
             array(
-                array( 'float',    'Value',   'Type'    ),
-                array( 'Expected', $exp[ 0 ], $exp[ 1 ] ),
-                array( 'Upper',    $upr[ 0 ], $upr[ 1 ] ),
-                array( 'Lower',    $lwr[ 0 ], $lwr[ 1 ] ),
-                array( 'Actual',   $act[ 0 ], $act[ 1 ] )
+                array( 'float',     'Value',   'Type'    ),
+                array( 'Expected',  $exp[ 0 ], $exp[ 1 ] ),
+                array( 'Tolerance', $tol[ 0 ], $tol[ 1 ] ),
+                array( 'Upper',     $upr[ 0 ], $upr[ 1 ] ),
+                array( 'Lower',     $lwr[ 0 ], $lwr[ 1 ] ),
+                array( 'Actual',    $act[ 0 ], $act[ 1 ] )
             )
         );
 
@@ -146,6 +148,30 @@ class Verifier {
         }
 
         $this->report( 'string', $expected, $actual, $result );
+
+        return $result;
+    }
+
+
+    /**
+     *  Verify arrays
+     *
+     *  @param expected The expected array
+     *  @param actual   The actual array
+     */
+    public function varray(
+        $expected,
+        $actual
+    ) {
+
+        if( is_array( $actual ) == false ) {
+            $result = false;
+        }
+        else {
+            $result = $expected == $actual;
+        }
+
+        $this->report( 'array', $expected, $actual, $result );
 
         return $result;
     }
@@ -220,7 +246,7 @@ class Verifier {
                 break;
 
             case 'array':
-                $string = strval( $value );
+                $string = $this->array2string( $value );
                 break;
 
             default:
@@ -231,6 +257,26 @@ class Verifier {
 
         return array( $string, $type );
 
+    }
+
+
+    /**
+     *  Serializes an array into a string
+     *
+     *  @param array    The array to serialize
+     *  @return         A string representation of the array
+     */
+    protected function array2string( $array ) {
+        $strings = array();
+        foreach( $array as $item ) {
+            if( is_array( $item ) ) {
+                $strings[] = '[' . $this->array2string( $item ) . ']';
+            }
+            else {
+                $strings[] = strval( $item );
+            }
+        }
+        return implode( ',', $strings );
     }
 
 

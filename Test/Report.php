@@ -16,9 +16,12 @@ class Report {
     const               NUM_HEADINGS = 4;
 
 
+    protected           $auto_resets;
     protected           $executor;
     protected           $logger;
-    protected           $auto_resets;
+
+
+    private             $headings;
 
 
     /**
@@ -35,6 +38,7 @@ class Report {
         $this->executor    = $executor;
         $this->logger      = $logger;
         $this->auto_resets = 1 << self::SECTION;
+        $this->headings    = array_pad( array(), self::NUM_HEADINGS, 0 );
 
     }
 
@@ -164,16 +168,39 @@ class Report {
         $heading
     ) {
 
-        //ZIH - keep track of number in each heading/step
-        //  then, prepend it to the text
-
-        $this->logger->log( $level, $heading );
-
+        //see if this heading level is valid
         if( $level < self::NUM_HEADINGS ) {
+
+            //reset heading counts for all lower heading levels
+            for( $i = ( $level + 1 ); $i < self::NUM_HEADINGS; ++$i ) {
+                $this->headings[ $i ] = 0;
+            }
+
+            //increment this heading count
+            $this->headings[ $level ] += 1;
+
+            //set up a "path" index for this heading
+            $path = implode(
+                '.',
+                array_slice( $this->headings, 0, ( $level + 1 ) )
+            );
+
+            //prepend the heading count to build the display text
+            $heading = $path . '. ' . $heading;
+
+            //log the heading
+            $this->logger->log( $level, $heading );
+
+            //set the bit for this heading level
             $bit = 1 << $level;
+
+            //check to see if this heading level auto-resets the test state
             if( ( $this->auto_resets & $bit ) == $bit ) {
+
+                //auto-reset the test state
                 $this->executor->resetTest();
             }
+
         }
 
     }

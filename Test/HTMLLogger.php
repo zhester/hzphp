@@ -21,15 +21,24 @@ class HTMLLogger extends Logger {
         $message
     ) {
 
+        //formatted output buffer
+        $out = '';
+
         if( $level <= Report::SUBSECTION ) {
             $h = strval( $level + 1 );
-            $out = '<h' . $h . '>'
+            $out .= '<h' . $h . '>'
                 . htmlspecialchars( $message )
                 . '</h' . $h . ">\n";
         }
 
+        else if( $level == Report::STEP ) {
+            $out .= '<p class="step">'
+                . htmlspecialchars( $message )
+                . "</p>\n";
+        }
+
         else {
-            $out = '<p>'
+            $out .= '<p>'
                 . htmlspecialchars( $message )
                 . "</p>\n";
         }
@@ -48,10 +57,10 @@ class HTMLLogger extends Logger {
         $result
     ) {
         if( $result == true ) {
-            $out = "<h4>PASSED</h4>\n";
+            $out = "<h4 class=\"result success\">PASSED</h4>\n";
         }
         else {
-            $out = '<h4 class="failure">FAILED</h4>' . "\n";
+            $out = "<h4 class=\"result failure\">FAILED</h4>\n";
         }
         return $this->out( $out );
     }
