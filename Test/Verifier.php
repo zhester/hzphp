@@ -87,14 +87,14 @@ class Verifier {
         $lwr = $this->info( $lower_limit );
 
         $this->executor->report->table(
-            array(
-                array( 'float',     'Value',   'Type'    ),
-                array( 'Expected',  $exp[ 0 ], $exp[ 1 ] ),
-                array( 'Tolerance', $tol[ 0 ], $tol[ 1 ] ),
-                array( 'Upper',     $upr[ 0 ], $upr[ 1 ] ),
-                array( 'Lower',     $lwr[ 0 ], $lwr[ 1 ] ),
-                array( 'Actual',    $act[ 0 ], $act[ 1 ] )
-            )
+            [
+                [ 'float',     'Value',   'Type'    ],
+                [ 'Expected',  $exp[ 0 ], $exp[ 1 ] ],
+                [ 'Tolerance', $tol[ 0 ], $tol[ 1 ] ],
+                [ 'Upper',     $upr[ 0 ], $upr[ 1 ] ],
+                [ 'Lower',     $lwr[ 0 ], $lwr[ 1 ] ],
+                [ 'Actual',    $act[ 0 ], $act[ 1 ] ]
+            ]
         );
 
         $this->executor->report->result( $result );
@@ -197,11 +197,11 @@ class Verifier {
         $act = $this->info( $actual   );
 
         $this->executor->report->table(
-            array(
-                array( $type,      'Value',   'Type'    ),
-                array( 'Expected', $exp[ 0 ], $exp[ 1 ] ),
-                array( 'Actual',   $act[ 0 ], $act[ 1 ] )
-            )
+            [
+                [ $type,      'Value',   'Type'    ],
+                [ 'Expected', $exp[ 0 ], $exp[ 1 ] ],
+                [ 'Actual',   $act[ 0 ], $act[ 1 ] ]
+            ]
         );
 
         $this->executor->report->result( $result );
@@ -255,7 +255,7 @@ class Verifier {
 
         }
 
-        return array( $string, $type );
+        return [ $string, $type ];
 
     }
 
@@ -267,7 +267,7 @@ class Verifier {
      *  @return         A string representation of the array
      */
     protected function array2string( $array ) {
-        $strings = array();
+        $strings = [];
         foreach( $array as $item ) {
             if( is_array( $item ) ) {
                 $strings[] = '[' . $this->array2string( $item ) . ']';

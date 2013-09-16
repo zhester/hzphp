@@ -6,12 +6,12 @@
 
 
 class StubReport {
-    public              $calls = array();
+    public              $calls = [];
     public function __call( $name, $args ) {
-        $this->calls[] = array( $name, $args );
+        $this->calls[] = [ $name, $args ];
     }
     public function _reset() {
-        $this->calls = array();
+        $this->calls = [];
     }
 }
 
@@ -58,11 +58,11 @@ class Verifier extends hzphp\Test\UnitTest {
 
         $report->heading( 'Check boolean verification.' );
 
-        $data = array(
-            array( 'bool',     'Value', 'Type' ),
-            array( 'Expected', '',      ''     ),
-            array( 'Actual',   '',      ''     )
-        );
+        $data = [
+            [ 'bool',     'Value', 'Type' ],
+            [ 'Expected', '',      ''     ],
+            [ 'Actual',   '',      ''     ]
+        ];
 
         $verifier->bool( true, true );
         $data[ 1 ][ 1 ] = 'true';
@@ -70,7 +70,7 @@ class Verifier extends hzphp\Test\UnitTest {
         $data[ 2 ][ 1 ] = 'true';
         $data[ 2 ][ 2 ] = 'boolean';
         $verify->varray(
-            array( 'table', array( $data ) ),
+            [ 'table', array( $data ) ],
             $exec->report->calls[ 0 ]
         );
         //ZIH a $verify->call() method could be handy to short-hand this

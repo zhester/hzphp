@@ -147,7 +147,7 @@ table {
 
 if( $has_test == true ) {
 
-    $exec = new hzphp\Test\Executor( array( new $name() ) );
+    $exec = new hzphp\Test\Executor( [ new $name() ] );
 
     $result = $exec->runTests();
 

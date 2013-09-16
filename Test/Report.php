@@ -38,7 +38,7 @@ class Report {
         $this->executor    = $executor;
         $this->logger      = $logger;
         $this->auto_resets = 1 << self::SECTION;
-        $this->headings    = array_pad( array(), self::NUM_HEADINGS, 0 );
+        $this->headings    = array_pad( [], self::NUM_HEADINGS, 0 );
 
     }
 

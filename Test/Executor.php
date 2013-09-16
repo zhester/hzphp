@@ -45,7 +45,7 @@ class Executor {
     ) {
 
         if( $tests === false ) {
-            $this->tests = array();
+            $this->tests = [];
         }
         else {
             $this->tests = $tests;

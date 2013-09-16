@@ -76,7 +76,7 @@ class HTMLLogger extends Logger {
         $table
     ) {
 
-        $rows = array();
+        $rows = [];
         foreach( $table as $row ) {
             $cells = array_map(
                 function( $item ) {

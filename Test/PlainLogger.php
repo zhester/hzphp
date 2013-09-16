@@ -86,8 +86,8 @@ class PlainLogger extends Logger {
         //measure all the cells
         $num_rows = count( $table );
         $num_cols = count( $table[ 0 ] );
-        $max_rows = array_pad( array(), $num_rows, 0 );
-        $max_cols = array_pad( array(), $num_cols, 1 );
+        $max_rows = array_pad( [], $num_rows, 0 );
+        $max_cols = array_pad( [], $num_cols, 1 );
         for( $i = 0; $i < $num_rows; ++$i ) {
             for( $j = 0; $j < $num_cols; ++$j ) {
                 $string = $table[ $i ][ $j ];
@@ -103,17 +103,17 @@ class PlainLogger extends Logger {
         }
 
         //prepare a table row separator line
-        $borders = array();
+        $borders = [];
         for( $j = 0; $j < $num_cols; ++$j ) {
             $borders[] = str_repeat( '-', ( $max_cols[ $j ] + 2 ) );
         }
         $row_sep = '+' . implode( '+', $borders ) . '+';
 
         //build a list of text lines
-        $lines = array();
+        $lines = [];
         for( $i = 0; $i < $num_rows; ++$i ) {
             $lines[] = $row_sep;
-            $line = array();
+            $line = [];
             //ZIH - this won't support multi-line cells like this
             for( $j = 0; $j < $num_cols; ++$j ) {
                 $line[] = str_pad( $table[ $i ][ $j ], $max_cols[ $j ], ' ' );
