@@ -18,9 +18,18 @@ class Request {
     public function handlePath(
         $path
     ) {
-        //search for first match to path in map (default is empty path)
-        //use Destination to create the Handler object, call a method,
-        //  return its Provider object
+        //ZIH - todo:
+
+        //search for first match to path in map
+        //$target = $this->map->getTargetFromPath( $path );
+
+        //use Target to create the Handler object
+        //$handler = $target->getHandler();
+
+        //create a new Response object, and return to user
+        //  ZIH - probably should allow Handler to talk directly to
+        //        Response for the status
+        return new Response( $handler, Status::OK );
     }
 
 

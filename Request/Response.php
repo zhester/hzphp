@@ -6,19 +6,16 @@ namespace hzphp\Request;
 class Response {
 
 
-    protected           $headers;
-    protected           $provider;
+    protected           $handler;
     protected           $status;
 
 
     public function __construct(
-        Provider $provider,
-        $status  = Status::OK,
-        $headers = []
+        Handler $handler,
+        $status = Status::OK
     ) {
-        $this->provider = $provider;
-        $this->status   = $status;
-        $this->headers  = $headers;
+        $this->handler = $handler;
+        $this->status  = $status;
     }
 
 
@@ -26,7 +23,8 @@ class Response {
         $handle
     ) {
         fwrite( $handle, Status::getStatus( $this->status ) );
-        foreach( $this->headers as $key => $value ) {
+        $headers = $this->handler->headers();
+        foreach( $headers as $key => $value ) {
             fwrite( $handle, ( "\n" . $key . ': ' . $value ) );
         }
         fwrite( $handle, "\n\n" );
@@ -37,7 +35,7 @@ class Response {
         $handle
     ) {
         $total = 0;
-        while( $buffer = $this->provider->getOutput() ) {
+        while( $buffer = $this->handler->read() ) {
             $length   = strlen( $buffer );
             $attempts = 0;
             $written  = 0;
@@ -84,7 +82,8 @@ class Response {
 
     public function sendHeaders() {
         header( Status::getStatus( $this->status ), true, $this->status );
-        foreach( $this->headers as $key => $value ) {
+        $headers = $this->handler->headers();
+        foreach( $headers as $key => $value ) {
             header( $key . ': ' . $value );
         }
     }

@@ -26,10 +26,10 @@ class Map {
     /**
      *
      */
-    public function add( $source, $destination ) {
+    public function add( $source, $target ) {
         $this->map[] = [
             new Source( $source ),
-            new Destination( $destination )
+            new Target( $target )
         ];
     }
 
