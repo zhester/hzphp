@@ -1,6 +1,6 @@
 <?php
 
-namespace hzphp\Response;
+namespace hzphp\Request;
 
 
 interface Provider {

@@ -1,6 +1,6 @@
 <?php
 
-namespace hzphp\Response;
+namespace hzphp\Request;
 
 
 class Response {
@@ -38,12 +38,19 @@ class Response {
     ) {
         $total = 0;
         while( $buffer = $this->provider->getOutput() ) {
-            $length = strlen( $buffer );
-            $written = 0;
+            $length   = strlen( $buffer );
+            $attempts = 0;
+            $written  = 0;
             while( $written < $length ) {
                 $result = fwrite( $handle, substr( $buffer, $written ) );
                 if( $result === false ) {
                     throw new Exception( 'Unable to write output.' );
+                }
+                else if( $result === 0 ) {
+                    $attempts += 1;
+                    if( $attempts > 1000 ) {
+                        throw new Exception( 'Unable to write output.' );
+                    }
                 }
                 $written += $result;
             }
