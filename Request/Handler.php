@@ -15,6 +15,7 @@ abstract class Handler implements Stream {
     protected           $m_eof        = false;
     protected           $m_bytes_read = 0;
     protected           $m_path       = '';
+    protected           $m_request    = null;
 
 
     /**
@@ -43,6 +44,18 @@ abstract class Handler implements Stream {
      */
     public function headers() {
         return [];
+    }
+
+
+    /**
+     *  Sets the request being handled.
+     *
+     *  @param request  The request being handled.
+     */
+    public function setRequest(
+        Request $request
+    ) {
+        $this->m_request = $request;
     }
 
 

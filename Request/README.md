@@ -32,9 +32,7 @@ Here's the basic "Hello World" example:
         }
     }
 
-    $map = new hzphp\Request\Map( [
-        [ '', 'MyHandler' ]
-    ] );
+    $map = new hzphp\Request\Map( [ [ '', 'MyHandler' ] ] );
 
     $request = new hzphp\Request\Request( $map );
 
@@ -47,3 +45,30 @@ from the details of the application behind it.  Generally speaking, once the
 user has set up their own request parameter/path mapping, the application can
 be quickly extended by adding to the request map, and implementing any
 necessary request handler objects.
+
+Here's a simpler method for generating content (if, a little less organized):
+
+    require 'hzphp/tools/loader.php';
+
+    function greet() {
+        return 'Hello World';
+    }
+
+    $map = new hzphp\Request\Map( [ [ '', 'greet()' ] ] );
+
+    $request = new hzphp\Request\Request( $map );
+
+    $response = $request->handlePath( '' );
+
+    $response->send();
+
+This example shows a more brief syntax for using this system, but it is less
+flexible in that regular expressions would need to be used to pass arguments
+into the function:
+
+    function greet2( $location ) { return "Hello $location"; }
+    $map = new hzphp\Request\Map( [ [ '#(\w+)#', 'greet2($1)' ] ] );
+
+For reasons of basic security, you may not map to any built-in function.  The
+function name specified in the target must always be a user-defined function
+(which, then, may call all the built-in functions you like).

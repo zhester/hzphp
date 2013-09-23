@@ -24,7 +24,7 @@ class Request {
         //$target = $this->map->getTargetFromPath( $path );
 
         //use Target to create the Handler object
-        //$handler = $target->getHandler();
+        //$handler = $target->getHandler( $this );
 
         //create a new Response object, and return to user
         //  ZIH - probably should allow Handler to talk directly to
