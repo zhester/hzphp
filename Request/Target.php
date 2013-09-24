@@ -42,46 +42,6 @@ class Target {
      *      Option 2: A CallbackHandler is instantiated, and configured to
      *          use the static method or global function.
      *
-     *  Arguments may be automatically passed to any Handler or function call.
-     *  Arguments come from the path that was mapped to the handler.  Parts of
-     *  the path, additional query arguments, query parameters, and the entire
-     *  path can be routed into the handler.
-     *
-     *  The pseudo-variables to capture arguments are:
-     *      Path branch names: #1 to #N
-     *      Entire path: #*
-     *      Suffix path: #+
-     *      A query parameter: #{key}
-     *      A query argument: #{1} to #{N}
-     *
-     *  The request formalizes these concepts.  For example:
-     *      - Assume a highly specified path is requested:
-     *          http://domain/app/object/category:id,subid?a=b&c=d
-     *      - Assume "app" is the above the known root of the request map.
-     *      - Assume the request source is specified as:
-     *          'object'
-     *      - Therefore:
-     *          #1      object
-     *          #2      category
-     *          #*      object/category
-     *          #+      category
-     *          #{1}    id
-     *          #{2}    subid
-     *          #{a}    b
-     *          #{c}    d
-     *
-     *  A few example target specifiers:
-     *      MyObjectList::getSubCategory(#{1},#{2})
-     *
-     *  ZIH - well, this turned into a mini-language far too quickly...
-     *      gotta rethink this whole design... possibly just expose the
-     *      user to regexps if they need fancy parameters/arguments
-     *      note: the handler should be able to fetch the parameters/arguments
-     *      from its member Request instance...
-     *      this is just for the CallbackHandler to deal with static methods
-     *      and global functions... maybe these types of specifiers belong in
-     *      that part of the implementation
-     *
      *  @param request
      *  @return
      *  @throws
@@ -97,41 +57,42 @@ class Target {
         $part = '[A-Za-z\\_][A-Za-z0-9\\_]+';
 
         //check for a static method
-        $result = preg_match(
-            '/(' . $part . ')::(\w+)/',
-            $spec,
-            $matches
-        );
+        $result = preg_match( '/(' . $part . ')::(\w+)/', $spec, $matches );
         if( $result == 1 ) {
-            //ZIH - set this up in a CallbackHandler, and return it
-            // obj->setRequest( $request )
-            return null;
+            if( ( class_exists( $matches[ 1 ] ) == true )
+             && ( method_exists( $matches[ 1 ], $matches[ 2 ] ) == true ) ) {
+                $handler = new CallbackHandler();
+                $handler->setCallback( $spec );
+                $handler->setRequest( $request );
+                return $handler;
+            }
         }
 
         //check for a class
-        $result = preg_match(
-            '/(' . $part . ')/',
-            $spec,
-            $matches
-        );
+        $result = preg_match( '/^(' . $part . ')$/', $spec, $matches );
         if( $result == 1 ) {
-            //ZIH - create one of these, and return it
-            // obj->setRequest( $request )
-            return null;
+            $hclass = __NAMESPACE__ . '\\Handler';
+            if( ( class_exists( $matches[ 1 ] ) == true )
+             && ( is_subclass_of( $matches[ 1 ], $hclass ) == true ) ) {
+                $handler = new $spec();
+                $handler->setRequest( $request );
+                return $handler;
+            }
         }
 
         //pull a list of all the functions
         $functions = get_defined_functions();
 
-        //ensure that the string is on the list of user-defined functions
-        if( in_array( $spec, $functions ) == true ) {
-            //ZIH - set this up in a CallbackHandler, and return it
-            // obj->setRequest( $request )
-            return null;
+        //ensure that the string is in the list of user-defined functions
+        if( in_array( $spec, $functions[ 'user' ] ) == true ) {
+            $handler = new CallbackHandler();
+            $handler->setCallback( $spec );
+            $handler->setRequest( $request );
+            return $handler;
         }
 
         //unable to match a usable request handler
-        throw new Exception( 'Invalid request handler: ' . $spec );
+        throw new \Exception( 'Invalid request handler: ' . $spec );
     }
 
 }

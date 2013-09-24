@@ -37,6 +37,16 @@ abstract class Handler implements Stream {
 
 
     /**
+     *  Allows user handlers to override and provide a custom HTTP status code
+     *
+     *  @return         HTTP status code (integer)
+     */
+    public function getStatus() {
+        return Status::OK;
+    }
+
+
+    /**
      *  Allows user handlers to override and provide custom HTTP response
      *  headers.  This will always be called before the first call to read().
      *

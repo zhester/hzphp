@@ -7,22 +7,19 @@ class Response {
 
 
     protected           $handler;
-    protected           $status;
 
 
     public function __construct(
-        Handler $handler,
-        $status = Status::OK
+        Handler $handler
     ) {
         $this->handler = $handler;
-        $this->status  = $status;
     }
 
 
     public function putHeaders(
         $handle
     ) {
-        fwrite( $handle, Status::getStatus( $this->status ) );
+        fwrite( $handle, Status::getHeader( $this->handler->getStatus() ) );
         $headers = $this->handler->headers();
         foreach( $headers as $key => $value ) {
             fwrite( $handle, ( "\n" . $key . ': ' . $value ) );
@@ -42,12 +39,12 @@ class Response {
             while( $written < $length ) {
                 $result = fwrite( $handle, substr( $buffer, $written ) );
                 if( $result === false ) {
-                    throw new Exception( 'Unable to write output.' );
+                    throw new \Exception( 'Unable to write output.' );
                 }
                 else if( $result === 0 ) {
                     $attempts += 1;
                     if( $attempts > 1000 ) {
-                        throw new Exception( 'Unable to write output.' );
+                        throw new \Exception( 'Unable to write output.' );
                     }
                 }
                 $written += $result;
@@ -67,7 +64,9 @@ class Response {
         ) {
             return 0;
         }
-        else if( array_key_exists( 'Location', $this->headers ) == true ) {
+        else if(
+            array_key_exists( 'Location', $this->handler->headers() ) == true
+        ) {
             return 0;
         }
         $handle = fopen( 'php://output', 'wb' );
@@ -81,7 +80,8 @@ class Response {
 
 
     public function sendHeaders() {
-        header( Status::getStatus( $this->status ), true, $this->status );
+        $status = $this->handler->getStatus();
+        header( Status::getHeader( $status ), true, $status );
         $headers = $this->handler->headers();
         foreach( $headers as $key => $value ) {
             header( $key . ': ' . $value );

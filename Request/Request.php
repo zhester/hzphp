@@ -1,4 +1,4 @@
-<?
+<?php
 
 namespace hzphp\Request;
 
@@ -18,18 +18,19 @@ class Request {
     public function handlePath(
         $path
     ) {
-        //ZIH - todo:
+
+        //ZIH - need to do some more sophisticated parsing here to extract
+        //      query details and load into $this so the handler object
+        //      can use them directly
 
         //search for first match to path in map
-        //$target = $this->map->getTargetFromPath( $path );
+        $target = $this->map->findTarget( $path );
 
         //use Target to create the Handler object
-        //$handler = $target->getHandler( $this );
+        $handler = $target->getHandler( $this );
 
         //create a new Response object, and return to user
-        //  ZIH - probably should allow Handler to talk directly to
-        //        Response for the status
-        return new Response( $handler, Status::OK );
+        return new Response( $handler );
     }
 
 

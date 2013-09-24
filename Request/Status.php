@@ -24,7 +24,7 @@ class Status {
         self::FOUND                 =>  2,
         self::BAD_REQUEST           =>  3,
         self::UNAUTHORIZED          =>  4,
-        self::FROBIDDEN             =>  5,
+        self::FORBIDDEN             =>  5,
         self::NOT_FOUND             =>  6,
         self::INTERNAL_SERVER_ERROR =>  7,
         self::NOT_IMPLEMENTED       =>  8,

@@ -3,69 +3,39 @@
 namespace hzphp\Request;
 
 
-class Path {
+abstract class Path {
 
 
     public static       $separator = '/';
 
 
-    protected           $is_regexp;
     protected           $specifier;
 
 
     public function __construct(
-        $specifier,
-        $is_regexp = false
+        $specifier
     ) {
-        if( is_array( $specifier ) ) {
-            $this->specifier = implode( self::$separator, $specifier );
-        }
-        else {
-            $this->specifier = $specifier;
-        }
-        $this->is_regexp = $is_regexp;
+        $this->specifier = $specifier;
     }
 
 
-    public function match(
-        $argument
-    ) {
-        if( is_array( $argument ) ) {
-            return $this->matchArray( $argument );
-        }
-        else if( is_string( $argument ) ) {
-            return $this->matchString( $argument );
-        }
-        return $this->matchString( strval( $argument ) );
+    public function __toString() {
+        return $this->specifier;
     }
 
 
-    public function matchArray(
-        Array $array
-    ) {
-        return $this->matchString( implode( self::$separator, $array ); );
-    }
-
-
-    public function matchString(
+    abstract public function match(
         $string
+    );
+
+
+    protected function split(
+        $string = false
     ) {
-
-        if( $this->is_regexp == true ) {
-            $result = preg_match( $this->specifier, $string, $matches );
-            if( $result == 1 ) {
-                return true;
-            }
+        if( $string == false ) {
+            return explode( self::$separator, $this->specifier );
         }
-
-        $spec_len = strlen( $this->specifier );
-        $str_len  = strlen( $string );
-
-        if( $spec_len <= $strlen ) {
-            return $this->specifier == substr( $string, 0, $spec_len );
-        }
-
-        return false;
+        return explode( self::$separator, $string );
     }
 
 
