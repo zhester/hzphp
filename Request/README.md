@@ -18,6 +18,30 @@ Here's the basic "Hello World" example:
 
     require 'hzphp/tools/loader.php';
 
+    function greet() {
+        return 'Hello World';
+    }
+
+    $map = new hzphp\Request\Map( [ [ '', 'greet' ] ] );
+
+    $request = new hzphp\Request\Request( $map );
+
+    $request->handleAndSend();
+
+The example demonstrates that each step of handling a request is isolated
+from the details of the application behind it.  Generally speaking, once the
+user has set up their own request parameter/path mapping, the application can
+be quickly extended by adding to the request map, and implementing any
+necessary request handler objects.
+
+Generally speaking, we like to organize our viewer objects a little better
+than just returning strings from global functions.  The more "typical" way to
+use the request module is to implement your own Handler class.  At that point,
+you benefit from more advanced URI parsing, you can override the HTTP headers,
+and stream data to the output.
+
+    require 'hzphp/tools/loader.php';
+
     class MyHandler extends hzphp\Request\Handler {
         private         $eof = false;
         public function headers() {
@@ -26,7 +50,12 @@ Here's the basic "Hello World" example:
         public function read() {
             if( $this->eof == false ) {
                 $this->eof = true;
-                return 'Hello World';
+                $object = 'World';
+                $q = $this->m_request->query;
+                if( count( $q[ 'forks' ] ) > 1 ) {
+                    $object = $q[ 'forks' ][ 1 ];
+                }
+                return "Hello $object";
             }
             return false;
         }
@@ -36,39 +65,6 @@ Here's the basic "Hello World" example:
 
     $request = new hzphp\Request\Request( $map );
 
-    $response = $request->handlePath( '' );
+    $response = $request->handleRequest();
 
     $response->send();
-
-The example demonstrates that each step of handling a request is isolated
-from the details of the application behind it.  Generally speaking, once the
-user has set up their own request parameter/path mapping, the application can
-be quickly extended by adding to the request map, and implementing any
-necessary request handler objects.
-
-Here's a simpler method for generating content (if, a little less organized):
-
-    require 'hzphp/tools/loader.php';
-
-    function greet() {
-        return 'Hello World';
-    }
-
-    $map = new hzphp\Request\Map( [ [ '', 'greet()' ] ] );
-
-    $request = new hzphp\Request\Request( $map );
-
-    $response = $request->handlePath( '' );
-
-    $response->send();
-
-This example shows a more brief syntax for using this system, but it is less
-flexible in that regular expressions would need to be used to pass arguments
-into the function:
-
-    function greet2( $location ) { return "Hello $location"; }
-    $map = new hzphp\Request\Map( [ [ '#(\w+)#', 'greet2($1)' ] ] );
-
-For reasons of basic security, you may not map to any built-in function.  The
-function name specified in the target must always be a user-defined function
-(which, then, may call all the built-in functions you like).

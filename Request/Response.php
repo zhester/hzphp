@@ -3,12 +3,21 @@
 namespace hzphp\Request;
 
 
+/**
+ *  Response output model.  Provides an abstraction to the method of response
+ *  output, and normalizes when/how headers are sent to the client.
+ */
 class Response {
 
 
     protected           $handler;
 
 
+    /**
+     *  Initializes the Response object.
+     *
+     *  @param handler
+     */
     public function __construct(
         Handler $handler
     ) {
@@ -16,6 +25,11 @@ class Response {
     }
 
 
+    /**
+     *  Puts HTTP headers on the specified handle.
+     *
+     *  @param handle
+     */
     public function putHeaders(
         $handle
     ) {
@@ -28,6 +42,13 @@ class Response {
     }
 
 
+    /**
+     *  Puts the response output on the specified handle.
+     *
+     *  @param handle
+     *  @return
+     *  @throws Exception
+     */
     public function put(
         $handle
     ) {
@@ -55,6 +76,12 @@ class Response {
     }
 
 
+    /**
+     *  Sends the complete response to the client over HTTP.
+     *
+     *  @return
+     *  @throws Exception
+     */
     public function send() {
         $this->sendHeaders();
         if(
@@ -79,6 +106,10 @@ class Response {
     }
 
 
+    /**
+     *  Sends the HTTP headers to the client.
+     *
+     */
     public function sendHeaders() {
         $status = $this->handler->getStatus();
         header( Status::getHeader( $status ), true, $status );
