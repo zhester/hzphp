@@ -35,6 +35,45 @@ behind parameterized interfaces.  The basic tenants of the DBI module are:
 * Future implementations may include the ability to adapt to changes in the
     schema.
 
+User-level Organization
+-----------------------
+
+The most important requirement is that the user's code is well-organized, and
+easy to navigate and maintain.  Therefore, this module will be heavily focused
+on making it simple to co-locate all the queries needed to deal with a
+particular level of data organization (be it table, node, file, etc).
+
+### Concepts ###
+
+The DBI module may not always be aware of database tables, or even the queries
+being used to access it.  Instead, the module assumes the user can handle that
+level of coordination, and just presents a consistent interface to
+establishing relationships between the stored data and the presentation layer.
+
+Therefore, it's necessary to abstract away concepts of _tables_, _records_,
+_arrays_, and _objects_.  Instead, the user will interact with the database
+via the concepts of _elements_, _tuples_, and _sets_.
+
+* *Elements* are a single record or object.
+* *Tuples* are finite collections of homogeneous Elements.
+* *Sets* are potentially very large collections of homogeneous Elements.
+
+Breaking with set theory terminology, it is assumed that order is always
+preserved (regardless if it's a tuple or set).
+
+### Organization ###
+
+For each presentable object in the database, the user will need to provide the
+following implementation details:
+
+* How to insert an element into a set
+* How to update an element
+* How to delete an element
+* How to retrieve a tuple and/or set of elements
+
+These details are broken down into two types: mutation and retrieval.  This
+gives the user a way to isolate critical queries from the mundane.
+
 Desired Coding Conventions
 --------------------------
 
@@ -59,35 +98,95 @@ connections, regardless of the internal details:
     $db = hzphp\DBI\DBI::init( 'sqlite:///path/to/file2.sqlite' );
     $db->alias( 'file2' );
 
-### Single Object Retrieval ###
+### Element Mutation ###
 
-The user should extend the ObjectMeta class.  This will require the user to
-define two methods:
+The user should extend the ElementMutator class.  Then, there are three ways
+to provide the expected queries to the module's interface.
 
-    class MyObject extends hzphp\DBI\ObjectMeta {
-        public static   $dbi_parameters = [
-            //ZIH - not sure what/how to specify parameters yet
-            'id' => [ ???? ]
+#### 1. Static Query Templates ####
+
+    class MyElementEditor extends hzphp\DBI\ElementMutator {
+        public static   $dbi_queries = [
+            'insert' : [ 'insert into my_table (name) values ({{name}})' ],
+            'update' : [ 'update my_table set name = {{name}}'
+                          . ' where id = {{id}} limit 1' ],
+            'delete' : [ 'delete from my_table where id = {{id}}' ]
         ];
-        public function dbi_getParameters() {
-            return self::$dbi_parameters;
+    }
+
+#### 2. Dynamic Query Templates ####
+
+    class MyElementEditor extends hzphp\DBI\ElementMutator {
+        public function getInsert() {
+            return [ 'insert into my_table (name) values ({{name}})' ];
         }
-        public function dbi_getSelect( Array $parameters ) {
-            return hzphp\DBI\Query::buildSelectOne(
-                'my_object',
-                $parameters
-            );
+        public function getUpdate() {
+            return [ 'update my_table set name = {{name}} where id = {{id}}' ];
+        }
+        public function getDelete() {
+            return [ 'delete from my_table where id = {{id}}' ];
         }
     }
 
-Once the module can query the user's code to find out how to query for the
-object, it can be instantiated and used as a record directly:
+#### 3. Automatic Query Generation ####
 
-    $my_object = new MyObject( [ 'id' => 42 ] );
-    echo $my_object[ 'description' ];
+This only works when managing trival elements that map 1:1 with records.
 
-Note: We're relying on ObjectMeta's constructor to do a lot of heavy lifting
-here.  If it gets overridden, the user is on the hook for making sure it's
-invoked correctly.
+    class MyElementEditor extends hzphp\DBI\ElementMutator {
+        public static   $dbi_autosql = [
+            'table'  : 'my_table',
+            'id'     : 'id',
+            'insert' : [ 'name' ],
+            'update' : [ 'name' ],
+            'delete' : true
+        ];
+    }
 
+Note: Each technique provides access to an array of queries.  When mutating,
+the queries are executed in order.  If any of the queries fails, the
+transation is automatically rolled back.
 
+Note: Update and delete queries are automatically appended with a "limit 1"
+clause if it isn't included in the query.  This may be overridden with a
+per-element configuration variable (public static $dbi_config; more later).
+
+### Element Retrieval ###
+
+    class MyElement extends hzphp\DBI\Element {
+        public function getSelect() {
+            return 'select id,name from my_table where id = {{id}}';
+        }
+    }
+
+### Set Retrieval ###
+
+    class MySet extends hzphp\DBI\Set {
+        public function getSelect() {
+            return 'select id,name from my_table order by name';
+        }
+    }
+
+### Mutation Execution ###
+
+These methods acquire (or build) queries using the user's implementation.
+Then, they execute the queries using the appropriate super global array as the
+source for arguments into the database's API.  That means, if you need to
+perform some re-formatting on the data, just update the (in this case) _POST
+super global array before calling the DBI static method.
+
+    $result = hzphp\DBI\DBI::insertFromSuper( 'MyElementEditor' );
+    $result = hzphp\DBI\DBI::updateFromSuper( 'MyElementEditor' );
+    $result = hzphp\DBI\DBI::deleteFromSuper( 'MyElementEditor' );
+
+### Retrieval Execution ###
+
+These methods do the same thing as the mutation methods.  The difference here
+is that they return a thin wrapper object on top of the object that is
+retrieved from the database's API.  In the case of an element or tuple, the
+data is immediately available (without calling a fetch).
+
+    //fetches an hzphp\DBI\Element instace
+    $element = hzphp\DBI\DBI::loadFromSuper( 'MyElement' );
+
+    //fetches an hzphp\DBI\Set instance
+    $set = hzphp\DBI\DBI::loadFromSuper( 'MySet' );
