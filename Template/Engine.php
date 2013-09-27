@@ -45,23 +45,13 @@ class Engine {
     /**
      *  Render the template
      *
-     *  @param data     An associative array of data for substitution values
+     *  @param data     An associative array or object of data for
+     *                  substitution values
      *  @return         A string constructed from a template and data
      */
     public function render(
         $data = null
     ) {
-
-        if( is_object( $data ) ) {
-/*
-ZIH - issue:
-    objects are getting passed as if they are data arrays.
-    would like to see if this is limiting me in any way, or if i can clean it
-    up, and restrict this parameter to arrays only
-*/
-            //echo get_class( $data ), "######\n";
-            debug_print_backtrace();
-        }
 
         if( $data !== null ) {
             $this->data = $data;
@@ -99,7 +89,8 @@ ZIH - issue:
      *  Render the template from a static context.
      *
      *  @param format   The template format as a string
-     *  @param data     An associative array of data for substitution values
+     *  @param data     An associative array or object of data for
+     *                  substitution values
      *  @return         A string constructed from a template and data
      */
     public static function srender(

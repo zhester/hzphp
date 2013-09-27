@@ -41,11 +41,10 @@ class Template {
         //assign some default data references
         $this->m_data = [
             [
-//ZIH - debugging, need these to be disabled for now
-//                '_REQUEST' => &$_REQUEST,
-//                '_SERVER'  => &$_SERVER,
-//                '_SESSION' => &$_SESSION,
-//                'GLOBALS'  => &$GLOBALS
+                '_REQUEST' => &$_REQUEST,
+                '_SERVER'  => &$_SERVER,
+                '_SESSION' => &$_SESSION,
+                'GLOBALS'  => &$GLOBALS
             ]
         ];
 
