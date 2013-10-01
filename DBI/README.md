@@ -1,6 +1,72 @@
 Database Interface
 ==================
 
+Desired Code Workflows
+----------------------
+
+### Data Consumer Code ###
+
+    $users = hzphp\DBI\DBI::getSet( 'Users' );
+    foreach( $users as $id => $user ) {
+        echo $user->name;
+    }
+
+    // -- or --
+
+    header( 'Content-Type: application/json' );
+    echo $users->getJSON();
+
+    //can still be queried generically (large, complex selects with joins)
+    $users = hzphp\DBI\DBI::getSet( 'Users', 'my_query_name', $arguments );
+
+### Data Manipulator Code ###
+
+    //create a new element
+    $users = hzphp\DBI\DBI::getSet( 'Users' );
+    $user = $users->insert( $_POST );
+
+    //simple fetching
+    $user = hzphp\DBI\DBI::getElement( 'User', 42 );
+    echo $user->name;
+
+    //updating a fetched object
+    $user->name = 'Ford Prefect';
+    $user->update();
+
+    //updating a fetched object using an associative array
+    $user->loadValues( $_POST );
+    $user->update();
+
+    //delete an object after fetching it
+    $user->delete();
+
+    //delete an object without fetching it
+    DBI::deleteElement( 'User', 42 );
+
+Initial Object Setup
+--------------------
+
+### project/DBI/User.php ###
+
+    namespace project/DBI;
+
+    class User extends hzphp\DBI\Element {
+    }
+
+### project/DBI/Users.php ###
+
+    namespace project/DBI;
+
+    class Users extends hzphp\DBI\Set {
+    }
+
+
+
+
+
+Database Interface -- First Iteration Below -- Delete Me
+========================================================
+
 Objective
 ---------
 
