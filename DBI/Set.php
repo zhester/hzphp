@@ -8,27 +8,36 @@ namespace hzphp\DBI;
  *
  *  Represents a collection of data elements.
  */
-abstract class Set implements Countable, Iterator {
+class Set implements Countable, Iterator {
 
 
-    protected           $m_number = 0;
+    protected static    $dbi_schema = [];
+                                    //specified by descendent classes to
+                                    //  help communicate with the DBAL
+
+
+    protected           $m_connection;
+                                    //Connection instance
+    protected           $m_number = false;
                                     //the number of records in the set
     protected           $m_index  = 0;
                                     //current record index
     protected           $m_record;  //current record object
-    protected           $m_source;  //Source instance
+    protected           $m_result = null;
+                                    //when loading the set, this maintians the
+                                    //  result instance
 
 
     /**
      *  Constructor
      *
-     *  @param source   Source instance to use for records
+     *  @param connection
+     *                  Data connection instance
      */
     public function __construct(
-        Source $source
+        Connection $connection
     ) {
-        $this->m_source = $source;
-        $this->m_number = $this->m_source->get_num_records();
+        $this->m_connection = $connection;
     }
 
 
@@ -39,10 +48,13 @@ abstract class Set implements Countable, Iterator {
      *  @param record   The element record's associative array
      *  @return         A new Element instance
      */
-    abstract public function createElement(
-        Source $source,
+    public function createElement(
+        Result $result,
         Array $record
-    );
+    ) {
+        //ZIH - may be unnecessary, but could be handy for overriding the
+        //  default construction strategy
+    }
 
 
     /**

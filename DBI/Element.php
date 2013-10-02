@@ -8,7 +8,7 @@ namespace hzphp\DBI;
  *
  *  Represents a single data element (record) from a data source.
  */
-abstract class Element implements ArrayAccess {
+class Element implements ArrayAccess {
 
 
     protected           $m_keys;    //list of field keys in the element

@@ -23,10 +23,11 @@ Desired Code Workflows
 
     //create a new element
     $users = hzphp\DBI\DBI::getSet( 'Users' );
-    $user = $users->insert( $_POST );
+    $user = $users->createElement( $_POST );
+    $users->insert( $user );
 
     //simple fetching
-    $user = hzphp\DBI\DBI::getElement( 'User', 42 );
+    $user = $users->fetchById( 42 );
     echo $user->name;
 
     //updating a fetched object
@@ -41,7 +42,7 @@ Desired Code Workflows
     $user->delete();
 
     //delete an object without fetching it
-    DBI::deleteElement( 'User', 42 );
+    $users->deleteById( 42 );
 
 Initial Object Setup
 --------------------
@@ -50,8 +51,40 @@ Initial Object Setup
 
     namespace project/DBI;
 
+    //for 1:1 table:object sets
     class Users extends hzphp\DBI\Set {
-        
+        public static   $dbi_schema = [
+            'name'   => 'users',
+            'id'     => 'id',
+            'fields' => [
+                'id'   => [ 'integer' ],
+                'name' => [ 'string' ],
+                'age'  => [ 'integer' ]
+            ]
+        ];
+    }
+
+    //list of field type strings:
+    //  boolean, integer, double, string, array, object, NULL
+
+    //for sets that need some additional work
+    class Users extends hzphp\DBI\Set {
+        public static   $dbi_schema = [
+            'name'   => 'users',
+            'id'     => 'id',
+            'fields' => [
+                'id'   => [ 'integer' ],
+                'name' => [ 'string' ],
+                'age'  => [ 'integer' ]
+            ]
+        ];
+        public function insert( Array $arguments ) {
+            //use m_connection without worrying about the Connection interface
+        }
+        public function update( Array $arguments ) {
+        }
+        public function deleteById( $id ) {
+        }
     }
 
 
