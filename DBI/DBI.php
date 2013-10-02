@@ -153,29 +153,21 @@ class DBI {
 
         $alias = self::$current;
 
-        if( self::$connections[ $alias ] === null ) {
+        if( is_null( self::$connections[ $alias ] ) == true ) {
 
-            $url = parse_url( self::$configs[ $alias ] );
+            $info = parse_url( self::$configs[ $alias ] );
+
             $scheme = 'mysqli';
-
-            if( isset( $url[ 'scheme' ] ) == true ) {
-                $scheme = $url[ 'scheme' ];
+            if( isset( $info[ 'scheme' ] ) == true ) {
+                $scheme = $info[ 'scheme' ];
             }
+
+            $class = __NAMESPACE__ . '\\' . $scheme . '\\Connection';
 
             switch( $scheme ) {
 
                 case 'mysqli':
-                    $port = 3306;
-                    if( isset( $url[ 'port' ] ) == true ) {
-                        $port = $url[ 'port' ];
-                    }
-                    self::$connections[ $alias ] = new mysqli(
-                        $url[ 'host' ],
-                        $url[ 'user' ],
-                        $url[ 'pass' ],
-                        trim( $url[ 'path' ], '/' ),
-                        $port
-                    );
+                    self::$connections[ $alias ] = new $class( $info );
                     break;
 
                 default:

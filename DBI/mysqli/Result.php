@@ -1,13 +1,13 @@
 <?php
 
-namespace hzphp\DBI;
+namespace hzphp\DBI\mysqli;
 
 
 /**
  *  Implements the compatibility layer for mysqli data source objects.
  *
  */
-class Source_mysqli extends \mysqli_result implements Source {
+class Result extends \mysqli_result implements \hzphp\DBI\Result {
 
 
     /**

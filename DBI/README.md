@@ -46,18 +46,12 @@ Desired Code Workflows
 Initial Object Setup
 --------------------
 
-### project/DBI/User.php ###
-
-    namespace project/DBI;
-
-    class User extends hzphp\DBI\Element {
-    }
-
 ### project/DBI/Users.php ###
 
     namespace project/DBI;
 
     class Users extends hzphp\DBI\Set {
+        
     }
 
 
