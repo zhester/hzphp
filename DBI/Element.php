@@ -147,10 +147,6 @@ abstract class Element implements ArrayAccess {
             GEOMETRY
 */
 
-        if( ( $type == MYSQLI_TYPE_NULL ) && ( $this->$offset == 'NULL' ) ) {
-            return null;
-        }
-
         switch( $type ) {
             case MYSQLI_TYPE_TINY:
             case MYSQLI_TYPE_SHORT:
