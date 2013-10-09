@@ -21,8 +21,10 @@ class Tools {
         Array $config = null
     ) {
 
-        if( class_exists( $source ) == true ) {
-            $db = new $source();
+        $class = __NAMESPACE__ . '\\' . $source;
+
+        if( class_exists( $class ) == true ) {
+            $db = new $class();
         }
         else {
             $db = new Iconic();
