@@ -4,19 +4,17 @@ namespace hzphp\Icon;
 
 
 /**
- *  Icon Set Delivery System
+ *  Icon Set Manager
  */
-class IconSet implements \ArrayAccess {
+class IconSet {
 
 
-    public              $config = [
+    protected           $config = [
         'color'      => '#4E4E50',
         'css_prefix' => '.button',
         'pad'        => 4,
         'size'       => 32
     ];
-
-
     protected           $database;
 
 
@@ -28,6 +26,11 @@ class IconSet implements \ArrayAccess {
 </svg>';
 
 
+    /**
+     *  Constructor
+     *
+     *  @param database An icon database object
+     */
     public function __construct(
         Database $database
     ) {
@@ -35,11 +38,22 @@ class IconSet implements \ArrayAccess {
     }
 
 
+    /**
+     *  Generates the SVG document for all icons when casting to a string.
+     *
+     *  @return         The SVG document as a string
+     */
     public function __toString() {
         return $this->getSVG();
     }
 
 
+    /**
+     *  Retrieves the value of a configuration item.
+     *
+     *  @param key      The configuration key
+     *  @return         The configuration value, or null on failure
+     */
     public function getConfig(
         $key
     ) {
@@ -50,6 +64,12 @@ class IconSet implements \ArrayAccess {
     }
 
 
+    /**
+     *  Retrieves CSS rules to help use a sprite set of icons with CSS
+     *  background images.
+     *
+     *  @return         CSS rules as a string
+     */
     public function getCSS() {
         $this->updateLayout();
         extract( $this->config );
@@ -74,6 +94,12 @@ class IconSet implements \ArrayAccess {
     }
 
 
+    /**
+     *  Retrieves one or all icons in an SVG document.
+     *
+     *  @param id       Specify to fetch a document with a single icon by ID
+     *  @return         The SVG document as a string
+     */
     public function getSVG(
         $id = null
     ) {
@@ -99,6 +125,7 @@ class IconSet implements \ArrayAccess {
         $icons  = [];
         $col    = 0;
         $row    = 0;
+
         foreach( $this->database->ids as $id ) {
             $icons[] = $this->database[ $id ]->getGroup(
                 [
@@ -123,35 +150,12 @@ class IconSet implements \ArrayAccess {
     }
 
 
-    public function offsetExists(
-        $id
-    ) {
-        return isset( $this->database[ $id ] );
-    }
-
-
-    public function offsetGet(
-        $id
-    ) {
-        $this->getSVG( $id );
-    }
-
-
-    public function offsetSet(
-        $id,
-        $value
-    ) {
-        //meh
-    }
-
-
-    public function offsetUnset(
-        $id
-    ) {
-        //meh
-    }
-
-
+    /**
+     *  Sets a configuration value.
+     *
+     *  @param key      The configuration key
+     *  @param value    The configuration value
+     */
     public function setConfig(
         $key,
         $value
@@ -171,6 +175,11 @@ class IconSet implements \ArrayAccess {
     }
 
 
+    /**
+     *  Imports configuration settings from an associative array.
+     *
+     *  @param array    The array of configuration information
+     */
     public function setConfigs(
         Array $array
     ) {
@@ -180,6 +189,15 @@ class IconSet implements \ArrayAccess {
     }
 
 
+    /**
+     *  Constructs an SVG document with the necessary details.
+     *
+     *  @param width    Width of the document in pixels
+     *  @param height   Height of the document in pixels
+     *  @param zoom     Zoom factor relative to original design sizes
+     *  @param color    Foreground color (CSS color value)
+     *  @param body     Document body contents
+     */
     protected function getDocument(
         $width,
         $height,
@@ -199,6 +217,10 @@ class IconSet implements \ArrayAccess {
     }
 
 
+    /**
+     *  Updates configuration values for the current layout.
+     *
+     */
     protected function updateLayout() {
         $num = $this->database->count();
         $this->config[ 'rows' ] = ceil( sqrt( $num ) );

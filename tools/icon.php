@@ -9,7 +9,7 @@
     Supported GET Query Parameters (all are optional)
         color           Foreground color of the icon shapes (CSS color value)
         css_prefix      Changes CSS selector prefix (default: .button)
-        icon            Fetch a single icon by ID
+        id              Fetch a single icon by ID
         pad             Inter-icon spacing (for sprite sheets only)
         meta            [See below]
         set             Source of icon data by name (currently only 'Iconic')
@@ -18,6 +18,11 @@
     A meta query can be performed to return icon database information in JSON.
     Use meta=* (only value currently supported) to see helpful information
     about how to query the icon set.
+
+    In the event that an invalid icon ID is requested, an "unknown" icon is
+    sent.  This should make it easier to debug problems than returning HTTP
+    response codes (since your client is unlikely to show these for images
+    that occur inside other documents).
 *****************************************************************************/
 
 require __DIR__ . '/loader.php';
@@ -56,8 +61,8 @@ if( ( isset( $_GET[ 'meta' ] ) ) && ( $_GET[ 'meta' ] == '*' ) ) {
 }
 
 //check for an individual icon being requested
-if( isset( $_GET[ 'icon' ] ) == true ) {
-    $svg = $set->getSVG( $_GET[ 'icon' ] );
+if( isset( $_GET[ 'id' ] ) == true ) {
+    $svg = $set->getSVG( $_GET[ 'id' ] );
 }
 
 //the entire set is being requested

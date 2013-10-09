@@ -9,7 +9,7 @@ namespace hzphp\Icon;
 class Database implements \ArrayAccess {
 
 
-    public              $ids = [];
+    public              $ids = [];  //list of all available IDs
 
 
     protected static    $icons   = [];
@@ -19,21 +19,41 @@ class Database implements \ArrayAccess {
     ];
 
 
+    /**
+     *  Constructor
+     *
+     */
     public function __construct() {
         $this->ids = array_keys( static::$icons );
     }
 
 
+    /**
+     *  Returns the number of icons in the database.
+     *
+     *  @return         Number of icons in the database
+     */
     public function count() {
         return count( $this->ids );
     }
 
 
+    /**
+     *  Returns the design size of the icons in the database
+     *
+     *  @return         Icon design size (in pixels)
+     */
     public function getSize() {
         return static::$size;
     }
 
 
+    /**
+     *  Implements existence check for ArrayAccess.
+     *
+     *  @param id       The icon ID to check
+     *  @return         True if the ID is in the database, otherwise false
+     */
     public function offsetExists(
         $id
     ) {
@@ -41,6 +61,12 @@ class Database implements \ArrayAccess {
     }
 
 
+    /**
+     *  Implements retrieval for ArrayAccess.
+     *
+     *  @param id       The icon ID to retrieve
+     *  @return         An instance of an Icon object for the given ID
+     */
     public function offsetGet(
         $id
     ) {
@@ -55,6 +81,12 @@ class Database implements \ArrayAccess {
     }
 
 
+    /**
+     *  Implements modification for ArrayAccess.
+     *
+     *  @param id       The icon ID to modify
+     *  @param value    The new icon path information as an array of strings
+     */
     public function offsetSet(
         $id,
         $value
@@ -63,6 +95,11 @@ class Database implements \ArrayAccess {
     }
 
 
+    /**
+     *  Implements destruction for ArrayAccess.
+     *
+     *  @param id       The icon ID to destroy
+     */
     public function offsetUnset(
         $id
     ) {
@@ -71,6 +108,5 @@ class Database implements \ArrayAccess {
 
 
 }
-
 
 ?>
