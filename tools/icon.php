@@ -8,6 +8,7 @@
 
     Supported GET Query Parameters (all are optional)
         color           Foreground color of the icon shapes (CSS color value)
+        css             [See Below]
         css_prefix      Changes CSS selector prefix (default: .button)
         id              Fetch a single icon by ID
         pad             Inter-icon spacing (for sprite sheets only)
@@ -18,6 +19,11 @@
     A meta query can be performed to return icon database information in JSON.
     Use meta=* (only value currently supported) to see helpful information
     about how to query the icon set.
+
+    CSS rules for positioning the sprite sheet as individual icons can be
+    fetched by setting the css parameter to '1' (or, just about anything).
+    All other parameters that might impact the generated rules are taken into
+    account.
 
     In the event that an invalid icon ID is requested, an "unknown" icon is
     sent.  This should make it easier to debug problems than returning HTTP
@@ -57,6 +63,15 @@ if( ( isset( $_GET[ 'meta' ] ) ) && ( $_GET[ 'meta' ] == '*' ) ) {
     header( 'Content-Type: application/json' );
     header( 'Content-Length: ' . strlen( $json ) );
     echo $json;
+    exit();
+}
+
+//check for a style sheet request
+if( isset( $_GET[ 'css' ] ) == true ) {
+    $css = $set->getCSS();
+    header( 'Content-Type: text/css' );
+    header( 'Content-Length: ' . strlen( $css ) );
+    echo $css;
     exit();
 }
 
