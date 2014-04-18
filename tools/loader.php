@@ -25,8 +25,21 @@ function hzphp_loader( $class ) {
     //convert namespace separators to path separators
     $path = str_replace( '\\', '/', $class );
 
-    //require the file that contains the class
-    require dirname( dirname( __DIR__ ) ) . '/' . $path . '.php';
+    //set the directory that contains the library
+    $dir = dirname( dirname( __DIR__ ) );
+
+    //see if this could be a shared exception (should be a rare event)
+    if( substr_compare( $path, 'Exception', -9 ) == 0 ) {
+        $modpath = substr( $path, 0, strrpos( $path, '/' ) );
+        $file = $dir . '/' . $modpath . '/Exceptions.php';
+        if( file_exists( $file ) == true ) {
+            require $file;
+            return;
+        }
+    }
+
+    //require the file that should contain the class
+    require $dir . '/' . $path . '.php';
 
 }
 
