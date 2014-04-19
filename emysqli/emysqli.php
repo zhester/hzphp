@@ -108,6 +108,17 @@ class emysqli extends \mysqli {
     }
 
 
+    /**
+     *  Fetches a table object representing a table in the current database.
+     *
+     *  @param name The name of the table to fetch
+     *  @return     A hzphp\DBUtil\Table instance
+     */
+    public function get_table( $name ) {
+        return new \hzphp\DBUtil\Table( $this, $name );
+    }
+
+
     /*------------------------------------------------------------------------
     Protected Methods
     ------------------------------------------------------------------------*/
