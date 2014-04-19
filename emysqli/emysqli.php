@@ -185,12 +185,12 @@ class emysqli extends \mysqli {
         //set up an update query
         $mq = new \hzphp\DBUtil\MutateQuery( $table, $values );
         $mq->setIgnoredFields( $ignore );
-        list( $query, $types, $vlist ) = $mqb->getUpdate( $id );
+        list( $query, $types, $vlist ) = $mq->getUpdate( $id );
 
         //prepare a query statement
         $statement = $this->prepare( $query );
         if( $this->errno != 0 ) {
-            throw new Exception(
+            throw new DatabaseException(
                 "Unable to update (prepare): " . $this->error
             );
         }
@@ -199,7 +199,7 @@ class emysqli extends \mysqli {
         array_unshift( $vlist, $types );
         call_user_func_array( [ $statement, 'bind_param' ], $vlist );
         if( $this->errno != 0 ) {
-            throw new Exception(
+            throw new DatabaseException(
                 "Unable to update (bind): " . $this->error
             );
         }
@@ -207,7 +207,7 @@ class emysqli extends \mysqli {
         //execute the statement
         $result = $statement->execute();
         if( $this->errno != 0 ) {
-            throw new Exception(
+            throw new DatabaseException(
                 "Unable to update (execute): " . $this->error
             );
         }
