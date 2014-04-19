@@ -98,6 +98,126 @@ class emysqli extends \mysqli {
 
 
     /**
+     *  Performs a structured, safe insertion into a table in the databse.
+     *
+     *  @param table  The name or Table object of the table in which to insert
+     *  @param values An associative array of values to store in the table.
+     *                The keys of which must match the table's field names.
+     *  @param ignore A list of fields that should be ignored, if given
+     *  @return       The insertion ID of the new record in the table
+     *  @throws DatabaseException
+     *                1. if the query fails mysqli::prepare()
+     *                2. if the parameters can be bound
+     *                3. if the query fails execution
+     */
+    public function auto_insert( $table, $values, $ignore = null ) {
+
+        //check for having a table object passed
+        if( ( $table instanceof \hzphp\DBUtil\Table ) == false ) {
+
+            //create the table object assuming we were given a name
+            $table = $this->get_table( $table );
+        }
+
+        //set up an insert query
+        $mq = new \hzphp\DBUtil\MutateQuery( $table, $values );
+        $mq->setIgnoredFields( $ignore );
+        list( $query, $types, $vlist ) = $mq->getInsert();
+
+        //prepare a query statement
+        $statement = $this->prepare( $query );
+        if( $this->errno != 0 ) {
+            throw new DatabaseException(
+                "Unable to insert (prepare): " . $this->error
+            );
+        }
+
+        //bind the parameters to the statement
+        array_unshift( $vlist, $types );
+        call_user_func_array( [ $statement, 'bind_param' ], $vlist );
+        if( $this->errno != 0 ) {
+            throw new DatabaseException(
+                "Unable to insert (bind): " . $this->error
+            );
+        }
+
+        //execute the statement
+        $result = $statement->execute();
+        if( $this->errno != 0 ) {
+            throw new DatabaseException(
+                "Unable to insert (execute): " . $this->error
+            );
+        }
+
+        //fetch the ID of the inserted record
+        $id = $statement->insert_id;
+
+        //release the statement's resources
+        $statement->close();
+
+        //return the ID of the inserted record
+        return $id;
+    }
+
+
+    /**
+     *  Performs a structured, safe update to a record in a table.
+     *
+     *  @param table  The name or Table object of the table in which to insert
+     *  @param id     The target record's ID value
+     *  @param values An associative array of values to update in the record.
+     *                The keys of which must match the table's field names.
+     *  @param ignore A list of fields that should be ignored, if given
+     *  @throws DatabaseException
+     *                1. if the query fails mysqli::prepare()
+     *                2. if the parameters can be bound
+     *                3. if the query fails execution
+     */
+    public function auto_update( $table, $id, $values, $ignore = null ) {
+
+        //check for having a table object passed
+        if( ( $table instanceof \hzphp\DBUtil\Table ) == false ) {
+
+            //create the table object assuming we were given a name
+            $table = $this->get_table( $table );
+        }
+
+        //set up an update query
+        $mq = new \hzphp\DBUtil\MutateQuery( $table, $values );
+        $mq->setIgnoredFields( $ignore );
+        list( $query, $types, $vlist ) = $mqb->getUpdate( $id );
+
+        //prepare a query statement
+        $statement = $this->prepare( $query );
+        if( $this->errno != 0 ) {
+            throw new Exception(
+                "Unable to update (prepare): " . $this->error
+            );
+        }
+
+        //bind the parameters to the statement
+        array_unshift( $vlist, $types );
+        call_user_func_array( [ $statement, 'bind_param' ], $vlist );
+        if( $this->errno != 0 ) {
+            throw new Exception(
+                "Unable to update (bind): " . $this->error
+            );
+        }
+
+        //execute the statement
+        $result = $statement->execute();
+        if( $this->errno != 0 ) {
+            throw new Exception(
+                "Unable to update (execute): " . $this->error
+            );
+        }
+
+        //release the statement's resources
+        $statement->close();
+    }
+
+
+    /**
      *  Properly creates a multi-query object for executing multiple queries
      *  with one request to the DBMS host.
      *
