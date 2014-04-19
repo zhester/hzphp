@@ -229,6 +229,80 @@ class emysqli extends \mysqli {
 
 
     /**
+     *  Performs a prepared query that expects to retrieve one record, and
+     *  returns the result as an associative array.
+     *
+     *  @param query The query to perform
+     *  @param types The prepared type string /[idsb]+/
+     *  @param vlist The list of values to substitute in the query
+     *  @return      An associative array containing the record, false if an
+     *               an error occurred, or null if the record was not found
+     *  @throws DatabaseException
+     *               1. if the query fails mysqli::prepare()
+     *               2. if the parameters can't be bound to the statement
+     *               3. if the statement fails execution
+     */
+    public function fetch_one_assoc( $query, $types, $vlist ) {
+
+        //create the statement
+        $statement = $this->prepare( $query );
+        if( $this->errno != 0 ) {
+            throw new DatabaseException( 'Prepare failed: ' . $this->error );
+        }
+
+        //construct an array creating (or adding) references to the value list
+        $bp_args = [ $types ];
+        foreach( $vlist as $i => $v ) {
+            $bp_args[] = &$vlist[ $i ];
+        }
+
+        //bind the parameters to the statement
+        call_user_func_array( [ $statement, 'bind_param' ], $bp_args );
+        if( $this->errno != 0 ) {
+            throw new DatabaseException( 'Bind failed: ' . $this->error );
+        }
+
+        //execute the statement
+        $statement->execute();
+        if( $this->errno != 0 ) {
+            throw new DatabaseException( 'Execute failed: ' . $this->error );
+        }
+
+        //initialize some stack space
+        $assoc  = [];
+        $output = [];
+
+        //fetch the list of fields that were returned from the query
+        $meta = $statement->result_metadata();
+        while( $field = $meta->fetch_field() ) {
+
+            //add an element to the associative array to store the record
+            $assoc[ $field->name ] = null;
+
+            //set an reference to the element for query output
+            $output[] = &$assoc[ $field->name ];
+        }
+
+        //bind the output references to the statement
+        call_user_func_array( [ $statement, 'bind_result' ], $output );
+
+        //fetch the result of the query
+        $result = $statement->fetch();
+        $statement->close();
+
+        //make sure the query succeeded
+        if( $result != true ) {
+
+            //mysqli_stmt::fetch() returns false on errors, null on empty
+            return $result;
+        }
+
+        //return the record as an associative array
+        return $assoc;
+    }
+
+
+    /**
      *  Fetches a table object representing a table in the current database.
      *
      *  @param name The name of the table to fetch
