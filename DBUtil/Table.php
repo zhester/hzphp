@@ -27,6 +27,8 @@ class Table {
     ------------------------------------------------------------------------*/
 
     protected           $db;        //the initialized mysqli instance
+    protected           $id_col_i = 0;
+                                    //the index of the ID column
     protected           $name;      //the name of the table
 
 
@@ -82,7 +84,7 @@ class Table {
      *  @param name The name of the property that was requested
      */
     public function __get( $name ) {
-        if( $name == 'table' ) {
+        if( $name == 'name' ) {
             return $this->name;
         }
         throw new UsageException( "Invalid property name requested: $name" );
@@ -103,19 +105,46 @@ class Table {
 
 
     /**
+     *  Get the name of the ID column.
+     *
+     *  @return The name of the ID column
+     */
+    public function getIDField() {
+        if( count( $this->_columns ) == 0 ) {
+            $this->loadColumns();
+        }
+        return $this->_columns[ $this->id_col_i ]->name;
+    }
+
+
+    /**
      *  Loads the list of columns into the object's state.
      *
      */
     public function loadColumns() {
+
+        //fetch the column list for this table
         $result = $this->db->query( "show columns from {$this->name}" );
+
+        //check the query for problems
         if( $this->db->errno != 0 ) {
             throw new DatabaseException(
                 "Unable to load columns for table ({$this->name}): "
                 . $this->db->error
             );
         }
+
+        //load each column into object state
+        $i = 0;
         while( ( $cdef = $result->fetch_assoc() ) !== null ) {
-            $this->_columns[] = new Column( $cdef );
+            $c = new Column( $cdef );
+            $this->_columns[ $i ] = $c;
+
+            //set the index to the ID column
+            if( $c->key == 'PRI' ) {
+                $this->id_col_i = $i;
+            }
+            $i += 1;
         }
     }
 
