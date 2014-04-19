@@ -53,7 +53,9 @@ class MutateQuery {
      *
      *  @param table  A Table object for the target table
      *  @param values An associative array of values for the query.  The keys
-     *                must match the names of the fields in the table.
+     *                must match the names of the fields in the table.  If a
+     *                value is set to NULL, it will not be included in the
+     *                query.
      */
     public function __construct( $table, $values ) {
 
