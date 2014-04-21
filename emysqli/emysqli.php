@@ -132,9 +132,14 @@ class emysqli extends \mysqli {
             );
         }
 
+        //construct an array creating (or adding) references to the value list
+        $bp_args = [ $types ];
+        foreach( $vlist as $i => $v ) {
+            $bp_args[] = &$vlist[ $i ];
+        }
+
         //bind the parameters to the statement
-        array_unshift( $vlist, $types );
-        call_user_func_array( [ $statement, 'bind_param' ], $vlist );
+        call_user_func_array( [ $statement, 'bind_param' ], $bp_args );
         if( $this->errno != 0 ) {
             throw new DatabaseException(
                 "Unable to insert (bind): " . $this->error
@@ -195,9 +200,14 @@ class emysqli extends \mysqli {
             );
         }
 
+        //construct an array creating (or adding) references to the value list
+        $bp_args = [ $types ];
+        foreach( $vlist as $i => $v ) {
+            $bp_args[] = &$vlist[ $i ];
+        }
+
         //bind the parameters to the statement
-        array_unshift( $vlist, $types );
-        call_user_func_array( [ $statement, 'bind_param' ], $vlist );
+        call_user_func_array( [ $statement, 'bind_param' ], $bp_args );
         if( $this->errno != 0 ) {
             throw new DatabaseException(
                 "Unable to update (bind): " . $this->error
