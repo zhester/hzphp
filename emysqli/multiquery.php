@@ -83,7 +83,7 @@ class multiquery {
 
         //add a query string to the list
         else {
-            $q = new Query( $this->db, $query );
+            $q = new query( $this->db, $query );
             $this->queries[] = $q;
         }
 
