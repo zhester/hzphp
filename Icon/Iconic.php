@@ -7,6 +7,7 @@ namespace hzphp\Icon;
  *  Iconic Icon Database
  *
  *  Source: http://www.somerandomdude.com/work/open-iconic/
+ *  Updated (2014-04-21): https://useiconic.com/open
  */
 class Iconic extends Database {
 
@@ -38,6 +39,22 @@ class Iconic extends Database {
 
         'check_fill' => [
             'M 16,0 C 7.164,0,0,7.164,0,16 s 7.164,16,16,16 s 16-7.164,16-16 S 24.836,0,16,0 z M 13.52,23.383 L 6.158,16.02 l 2.828-2.828 l 4.533,4.535l9.617-9.617 l 2.828,2.828 L 13.52,23.383 z'
+        ],
+
+        'chevron_down' => [
+            'M 6,4 l -6,6 16,16, 16,-16 -6,-6 -10,10, -10,-10 z'
+        ],
+
+        'chevron_left' => [
+            'M 20,0 l -16,16 16,16, 6,-6 -10,-10 10,-10, -6,-6 z'
+        ],
+
+        'chevron_right' => [
+            'M 10,0 l -6,6 10,10, -10,10 6,6 16,-16, -16,-16 z'
+        ],
+
+        'chevron_up' => [
+            'M 16,4 l -16,16 6,6, 10,-10 10,10 6,-6, -16,-16 z'
         ],
 
         'cog' => [
@@ -76,6 +93,11 @@ class Iconic extends Database {
 
         'minus' => [
             'm 32,12 -32,0 0,8 32,0 z'
+        ],
+
+        'pencil' => [
+            'M 24,0 l -4,4 8,8 4,-4 -8,-8 z',
+            'M 16,8 l -16,16 v 8 h 8 l 16,-16 -8,-8 z'
         ],
 
         'plus' => [
