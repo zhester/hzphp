@@ -252,7 +252,7 @@ class emysqli extends \mysqli {
      *               2. if the parameters can't be bound to the statement
      *               3. if the statement fails execution
      */
-    public function fetch_one_assoc( $query, $types, $vlist ) {
+    public function fetch_one_assoc( $query, $types = null, $vlist = null ) {
 
         //create the statement
         $statement = $this->prepare( $query );
@@ -260,16 +260,20 @@ class emysqli extends \mysqli {
             throw new DatabaseException( 'Prepare failed: ' . $this->error );
         }
 
-        //construct an array creating (or adding) references to the value list
-        $bp_args = [ $types ];
-        foreach( $vlist as $i => $v ) {
-            $bp_args[] = &$vlist[ $i ];
-        }
+        //check for query parameters
+        if( $types != null ) {
 
-        //bind the parameters to the statement
-        call_user_func_array( [ $statement, 'bind_param' ], $bp_args );
-        if( $this->errno != 0 ) {
-            throw new DatabaseException( 'Bind failed: ' . $this->error );
+            //make an array creating (or adding) references to the value list
+            $bp_args = [ $types ];
+            foreach( $vlist as $i => $v ) {
+                $bp_args[] = &$vlist[ $i ];
+            }
+
+            //bind the parameters to the statement
+            call_user_func_array( [ $statement, 'bind_param' ], $bp_args );
+            if( $this->errno != 0 ) {
+                throw new DatabaseException( 'Bind failed: ' . $this->error );
+            }
         }
 
         //execute the statement
