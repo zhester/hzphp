@@ -68,3 +68,4 @@ and stream data to the output.
     $response = $request->handleRequest();
 
     $response->send();
+

@@ -95,4 +95,3 @@ class Verifier extends hzphp\Test\UnitTest {
 
 }
 
-?>

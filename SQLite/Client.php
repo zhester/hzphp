@@ -60,4 +60,3 @@ class Client extends \SQLite3 {
 
 }
 
-?>

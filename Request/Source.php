@@ -15,4 +15,3 @@ class Source extends Path {
 
 }
 
-?>

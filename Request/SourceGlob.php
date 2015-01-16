@@ -38,4 +38,3 @@ class SourceGlob extends Source {
 
 }
 
-?>

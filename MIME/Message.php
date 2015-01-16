@@ -95,4 +95,3 @@ class Message extends Part {
     }
 }
 
-?>

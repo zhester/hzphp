@@ -109,4 +109,3 @@ class Database implements \ArrayAccess {
 
 }
 
-?>

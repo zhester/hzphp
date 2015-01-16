@@ -30,4 +30,3 @@ class DatabaseException extends Exception {}
  */
 class UsageException extends Exception {}
 
-?>

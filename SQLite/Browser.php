@@ -101,4 +101,3 @@ class Browser extends Client {
 
 }
 
-?>

@@ -33,4 +33,3 @@ class Result extends \mysqli_result implements \hzphp\DBI\Result {
 }
 
 
-?>

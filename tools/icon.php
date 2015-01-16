@@ -89,4 +89,3 @@ header( 'Content-Type: image/svg+xml' );
 header( 'Content-Length: ' . strlen( $svg ) );
 echo $svg;
 
-?>

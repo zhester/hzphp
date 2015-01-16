@@ -29,4 +29,3 @@ class Connection extends \mysqli implements \hzphp\DBI\Connection {
 }
 
 
-?>

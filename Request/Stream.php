@@ -76,4 +76,3 @@ interface Stream {
 
 }
 
-?>

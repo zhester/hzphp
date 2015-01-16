@@ -135,4 +135,3 @@ class Iconic extends Database {
 }
 
 
-?>

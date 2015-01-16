@@ -165,4 +165,3 @@ abstract class Handler implements Stream {
 
 }
 
-?>

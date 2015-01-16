@@ -33,4 +33,3 @@ class CallbackHandler extends Handler {
 
 }
 
-?>

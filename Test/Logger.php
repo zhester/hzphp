@@ -111,4 +111,3 @@ abstract class Logger {
 
 }
 
-?>

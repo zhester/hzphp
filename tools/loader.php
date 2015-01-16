@@ -48,4 +48,3 @@ function hzphp_loader( $class ) {
 spl_autoload_register( 'hzphp_loader' );
 
 
-?>

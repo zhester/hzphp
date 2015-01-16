@@ -219,4 +219,3 @@ if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
     //$mq = new MutateQuery();
 }
 
-?>

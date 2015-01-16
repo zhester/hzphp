@@ -115,4 +115,3 @@ class HTMLLogger extends Logger {
 
 }
 
-?>

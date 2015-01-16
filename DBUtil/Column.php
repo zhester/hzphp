@@ -222,4 +222,3 @@ if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
     //$t = new Column();
 }
 
-?>

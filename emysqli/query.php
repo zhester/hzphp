@@ -258,4 +258,3 @@ if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
     //$q = new query();
 }
 
-?>
