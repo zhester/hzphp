@@ -211,32 +211,45 @@ class Struct {
      */
     public static function packlist( $format ) {
 
-        //offset into the format string to begin matching
-        $off = 0;
+        //a regular expression fragment for matching pack fields
+        $refrag = '(' . self::$cclass . ')(\\*|\\d+)?';
 
         //list of packing specifiers
         $specs = [];
 
-        //scan format string for each packing specifier
-        while(
-            preg_match( '/(\\w)(\\*|\\d+)?/', $format, $m, 0, $off ) == 1
-        ) {
+        //see if this is clearly a PHP-style unpack string
+        if( strpos( $format, '/' ) !== false ) {
 
-            //assume no repeition is specified
-            $rep = 1;
+            //break apart each unpack field
+            $fields = explode( '/', $format );
 
-            //check for specified repetition
-            if( count( $m ) == 3 ) {
+            //strip out the field name, and construct specifiers
+            $specs = array_map(
+                function( $field ) {
+                    if( preg_match( "/$refrag.*/", $field, $m ) == 1 ) {
+                        return self::groups2spec( $m );
+                    }
+                    return false;
+                },
+                $fields
+            );
+        }
 
-                //check for "remainder" repetition
-                $rep = $m[ 2 ] == '*' ? null : intval( $m[ 2 ] );
+        //this is a normal pack string
+        else {
+
+            //offset into the format string to begin matching
+            $off = 0;
+
+            //scan format string for each packing specifier
+            while( preg_match( "/$refrag/", $format, $m, 0, $off ) == 1 ) {
+
+                //add to the list of specifiers
+                $specs[] = self::groups2spec( $m );
+
+                //advance the scanning offset
+                $off += strlen( $m[ 0 ] );
             }
-
-            //add to the list of specifiers
-            $specs[] = [ $m[ 1 ], $rep ];
-
-            //advance the scanning offset
-            $off += strlen( $m[ 0 ] );
         }
 
         //return the list of specifiers
@@ -262,16 +275,27 @@ class Struct {
      */
     public static function unpack( $format, $data, $select = false ) {
 
-        //parse the list of unpacking specifiers
-        $specs = self::packlist( $format );
+        //see if the user has passed a PHP-style unpack string
+        if( strpos( $format, '/' ) !== false ) {
 
-        //convert the packing specifiers into a PHP-style unpack string
-        $num_specs = count( $specs );
-        $unpack_specs = [];
-        for( $i = 0; $i < $num_specs; ++$i ) {
-            $unpack_specs[] = implode( '', $specs[ $i ] ) . "k$i";
+            //use it
+            $unpack_string = $format;
         }
-        $unpack_string = implode( '/', $unpack_specs );
+
+        //the user has passed a normal pack string
+        else {
+
+            //parse the list of unpacking specifiers
+            $specs = self::packlist( $format );
+
+            //convert the packing specifiers into a PHP-style unpack string
+            $num_specs = count( $specs );
+            $unpack_specs = [];
+            for( $i = 0; $i < $num_specs; ++$i ) {
+                $unpack_specs[] = implode( '', $specs[ $i ] ) . "k$i";
+            }
+            $unpack_string = implode( '/', $unpack_specs );
+        }
 
         //bounds check the data against how much we need
         if( strlen( $data ) < self::calcsize( $format ) ) {
@@ -292,14 +316,6 @@ class Struct {
             if( isset( $parts[ $key ] ) ) {
                 return $parts[ $key ];
             }
-            //ZIH - deleteme
-            //echo "## Failed to Unpack Data ##\n";
-            //echo "Length: " . strlen( $data ) . "\n";
-            //echo "Format: $format -> $unpack_string\n";
-            //echo "Data:\n";
-            //echo Struct::gethexdump( $data );
-            //echo "\n";
-            //var_dump( $parts );
         }
 
         //report the list of unpacked values
@@ -314,6 +330,30 @@ class Struct {
     /*------------------------------------------------------------------------
     Private Methods
     ------------------------------------------------------------------------*/
+
+    /**
+     * Converts expression matching groups list to a field specifier array.
+     *
+     * @param groups The list of matching groups (from `preg_match()`)
+     * @return       A two-element array specifying a pack field.  The
+     *               specifier represents the packing type in the first
+     *               offset, and the repetition in second offset.
+     */
+    private static function groups2spec( $groups ) {
+
+        //assume no repeition is specified
+        $rep = 1;
+
+        //check for specified repetition
+        if( count( $groups ) == 3 ) {
+
+            //check for "remainder" repetition
+            $rep = $groups[ 2 ] == '*' ? null : intval( $groups[ 2 ] );
+        }
+
+        //construct the specifier
+        return [ $groups[ 1 ], $rep ];
+    }
 
 }
 
