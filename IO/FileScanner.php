@@ -244,7 +244,7 @@ class FileScanner {
         }
 
         //create a new slice object (allow under-specified slice lists)
-        $slicer_class = new ReflectionClass( '\hzphp\Util\Slicer' );
+        $slicer_class = new \ReflectionClass( '\hzphp\Util\Slicer' );
         $this->slicer = $slicer_class->newInstanceArgs(
             $this->spec[ 'slice' ]
         );
