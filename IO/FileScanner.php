@@ -484,6 +484,11 @@ class FileScanner {
         //determine the record length
         $length = \hzphp\Util\Struct::unpack( $format, $length_string, true );
 
+        //sanity check the extracted length (16kB per record, for now)
+        if( $length > ( 16 * 1024 * 1024 ) ) {
+            return false;
+        }
+
         //fetch the record data, and return it
         return $this->streamio->read( $length );
     }
