@@ -316,8 +316,16 @@ class Assoc implements
         //object given
         else if( is_object( $data ) ) {
 
+            //when pulling data from Assoc objects, PHP will do the iteration
+            //on accessible properties.  this won't work for us.
+            if( $data instanceof Assoc ) {
+
+                //merge from the source object's data property
+                $this->merge( $data->data );
+            }
+
             //see if the object can be iterated
-            if( $data instanceof Iterable ) {
+            else if( $data instanceof Iterable ) {
 
                 //merge as usual
                 $this->merge( $data );

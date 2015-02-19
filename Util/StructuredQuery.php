@@ -221,6 +221,8 @@ Execution
 if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
     header( 'Content-Type: text/plain' );
     $query = new StructuredQuery( [
+        'int'           => '42',
+        'dec'           => '3.14159',
         'open_string'   => 'open string',
         'closed_string' => '"closed string"',
         'vector_ints'   => '(1,8,42)',
