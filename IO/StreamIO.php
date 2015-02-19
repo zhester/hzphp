@@ -37,6 +37,9 @@ class StreamIO {
     Protected Properties
     ------------------------------------------------------------------------*/
 
+    //user file's name
+    protected $filename = null;
+
     //file stream handle
     protected $stream = null;
 
@@ -51,12 +54,63 @@ class StreamIO {
 
 
     /**
-     * Constructor.
+     * StreamIO instance constructor.
      *
-     * @param file The open file stream from which we will extract data.
+     * @param stream The open file stream from which we will extract data.
+     *               This can also be a file name (string) that will be opened
+     *               during construction, and closed when the object is
+     *               garbage collected.
+     * @param mode   If passing a file name, specify the mode in which the
+     *               file will be opened (default: 'r')
+     * @throws       RuntimeException if the file (specified by name) can not
+     *               be opened
      */
-    public function __construct( $stream ) {
-        $this->stream = $stream;
+    public function __construct( $stream, $mode = 'r' ) {
+
+        //detect file name instead of resource
+        if( is_string( $stream ) ) {
+            $this->filename = $stream;
+            $this->stream   = fopen( $stream, $mode );
+            if( $this->stream === false ) {
+                throw \RuntimeException( "Unable to open file $stream." );
+            }
+        }
+
+        //detect normal resource
+        else if( is_resource( $stream ) ) {
+            $this->stream = $stream;
+        }
+    }
+
+    /**
+     * StreamIO instance desctructor.
+     *
+     */
+    public function __destruct() {
+
+        //see if we were given a file name instead of a stream resource
+        if( $this->filename !== null ) {
+
+            //close the file
+            $this->close();
+        }
+    }
+
+
+
+    /**
+     * Closes the stream resource.
+     *
+     */
+    public function close() {
+
+        //avoid re-closing files that were already closed
+        if( $this->stream !== null ) {
+
+            //close the file, and clear the stream property
+            fclose( $this->stream );
+            $this->stream = null;
+        }
     }
 
 
