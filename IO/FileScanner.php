@@ -19,7 +19,7 @@ Query Components
 The query consists of these items:
 
 - `ident`: record identification scheme (default: matches all records)
-- `step`: how to navigate between records (default: fixed, byte 0 to 1)
+- `step`: how to navigate between records (default: records are 1 byte long)
 - `part`: what to extract from each record (default: entire record)
 - `slice`: reduce the output to a subset of the final record list (default:
   send extracted parts of all matching records)
@@ -116,7 +116,19 @@ Record identifiers are given with a vector containing two parts.
     ((fix,0,4),abcd)
     ((var,4,L),(s,128,256))
 
-Record steps are given with as an extraction specifier (vector).
+Record steps are given with with a vector containing two parts.
+
+    (<offset>,<length>)
+
+Each part may be a number or extraction specifier.  The offset is relative to
+start of the record (usually the header) to where the reference point for the
+specified length of the record.  This allows the record length to be both
+dynamically extracted from the stream, and also indicate how this length
+should be used to step over the record.  Not all formats will base their
+length from the beginning of the record (header), and we don't require knowing
+details of the format (such as the length of the header itself).  The offset
+can be dynically determined if we know where to extract it relative to the
+start of the record.
 
 Record payloads are given with a vector containing two parts.  Each part may
 be either a number (indicating a fixed offset or length in the record) or an
@@ -135,7 +147,7 @@ URL-style Queries
 
     ident=((var,0,L),2147592789)
     &
-    step=(var,4,L)
+    step=(8,(var,4,L))
     &
     part=(8,4)
     &
@@ -157,7 +169,6 @@ Dependencies
 Classes
 ----------------------------------------------------------------------------*/
 
-
 /**
  * Encapsulates functionality for parsing and retrieving selected parts of a
  * file based on a scan specification query.
@@ -168,6 +179,10 @@ class FileScanner {
     /*------------------------------------------------------------------------
     Public Properties
     ------------------------------------------------------------------------*/
+
+    //upper limit for record lengths in the stream (16kB)
+    public $max_record_length = 16384;
+
 
     /*------------------------------------------------------------------------
     Protected Properties
@@ -180,13 +195,21 @@ class FileScanner {
         'ident' => [ [ 'fix', 0, 1 ], null ],
 
         //each record is one byte long
-        'step'  => [ 'fix', 0, 1 ],
+        'step'  => [ 0, 1 ],
 
         //extract the entire record
         'part'  => [ 0, null ],
 
         //return parts of all matching records
         'slice' => [ 0, null, 1 ]
+    ];
+
+    //rough validation of incoming query values [ required, optional ]
+    protected static $validate = [
+        'ident' => [ 1, 1 ],
+        'step'  => [ 2, 0 ],
+        'part'  => [ 2, 0 ],
+        'slice' => [ 2, 1 ]
     ];
 
     /*======================================================================*/
@@ -220,7 +243,7 @@ class FileScanner {
     ------------------------------------------------------------------------*/
 
     /**
-     * Constructor.
+     * FileScanner constructor.
      *
      * @param streamio The StreamIO instance to scan
      * @param query    The scanning query as an associative array
@@ -239,7 +262,20 @@ class FileScanner {
         //use the query to modify the default scanning specification
         foreach( $this->spec as $k => $v ) {
             if( isset( $this->query->$k ) ) {
-                $this->spec[ $k ] = $this->query->$k;
+                $spec = $this->query->$k;
+                $val  = self::$validate[ $k ];
+                $num_spec = count( $spec );
+                if(
+                    ( $num_spec < $val[ 0 ] )
+                    ||
+                    ( $num_spec > ( $val[ 0 ] + $val[ 1 ] ) )
+                ) {
+                    throw new RuntimeError(
+                        "Invalid scanning specification for $k."
+                    );
+                }
+                //ZIH - add more validation (using StructuredQuery)
+                $this->spec[ $k ] = $spec;
             }
         }
 
@@ -313,18 +349,11 @@ class FileScanner {
      */
     public function getNextRecord() {
 
-        //step specifier
-        $step = $this->spec[ 'step' ];
-
-        //determine the method needed for record stepping
-        $step_method = $step[ 0 ] == 'var' ? 'getVarRecord' : 'getFixRecord';
+        //step specifiers
+        list( $offset, $length ) = $this->spec[ 'step' ];
 
         //step through each record until we find a match
-        while(
-            ( $data = call_user_func(
-                [ $this, $step_method ], $step[ 1 ], $step[ 2 ]
-            ) ) !== false
-        ) {
+        while( ( $data = $this->step( $offset, $length ) ) !== false ) {
 
             //increment records scanned counter
             $this->stats[ 'scanned' ] += 1;
@@ -448,55 +477,114 @@ class FileScanner {
     ------------------------------------------------------------------------*/
 
     /**
-     * Retrieves the next record from the stream using the given `fix`
-     * step information.
+     * Steps to the next record in the stream, returning the traversed record
+     * data.
      *
-     * @param offset The offset into the stream to start retrieving
-     * @param length The length of the record to retrieve
+     * @param offset The fixed offset or extraction spec for the offset
+     * @param length The fixed length or extraction spec for the length
      * @return       The record's data as a string
      */
-    protected function getFixRecord( $offset, $length ) {
-        return $this->streamio->extract( $offset, $length );
-    }
+    protected function step( $offset, $length ) {
 
+        //check for extraction specifier to find offset
+        if( is_array( $offset ) ) {
 
-    /**
-     * Retrieves the next variable-length record from the stream.
-     *
-     * @param offset The offset into the stream that contains the length field
-     *               for the record.
-     * @param format The pack string format of the length field
-     * @return       The record's data as a string
-     */
-    protected function getVarRecord( $offset, $format ) {
+            //only var offsets are allowed
+            if( $offset[ 0 ] != 'var' ) {
+                return false;
+            }
 
-        //determine the length of the record length field
-        $length = \hzphp\Util\Struct::calcsize( $format );
-
-        //fetch the length of this record, and reset the file position
-        $length_string = $this->streamio->extract( $offset, $length, true );
-
-        //check for error/EOF
-        if( $length_string === false ) {
-            return false;
+            //extract offset
+            $offset = $this->sneak( $offset );
         }
 
-        //determine the record length
-        $length = \hzphp\Util\Struct::unpack( $format, $length_string, true );
+        //check for extraction specifier to find length
+        if( is_array( $length ) ) {
 
-        //sanity check the extracted length (16kB per record, for now)
-        if( $length > ( 16 * 1024 * 1024 ) ) {
-            return false;
+            //only var lengths are allowed
+            if( $length[ 0 ] != 'var' ) {
+                return false;
+            }
+
+            //extract length
+            $length = $this->sneak( $length );
+
+            //sanity check the extracted length
+            if( $length > $this->max_record_length ) {
+                return false;
+            }
         }
 
         //fetch the record data, and return it
-        return $this->streamio->read( $length );
+        return $this->streamio->read( $offset + $length );
     }
 
 
     /*------------------------------------------------------------------------
     Private Methods
     ------------------------------------------------------------------------*/
+
+    /**
+     * Sneaks data out of the stream such that no one will notice.
+     *
+     * @param spec   The extraction specifier
+     * @param unpack If the specifier was fixed-length, optionally unpack it
+     *               using the given specifier (default: no unpacking done)
+     * @return       The data as a string or unpacked value (depending on spec)
+     */
+    private function sneak( $spec, $unpack = false ) {
+
+        //check for variable specifier
+        if( $spec[ 0 ] == 'var' ) {
+
+            //determine the length of the field
+            $length = \hzphp\Util\Struct::calcsize( $spec[ 2 ] );
+
+            //fetch the data for this field, reset file position
+            $data = $this->streamio->extract( $spec[ 1 ], $length, true );
+
+            //check for error/EOF
+            if( $data === false ) {
+                return false;
+            }
+
+            //unpack the extracted field
+            $value = \hzphp\Util\Struct::unpack( $spec[ 2 ], $data, true );
+        }
+
+        //assume fixed-length specifier
+        else {
+
+            //fetch the data, reset file position
+            $value = $this->streamio->extract( $spec[ 1 ], $spec[ 2 ], true );
+
+            //see if the user wants automatic unpacking
+            if( $unpack != false ) {
+
+                //see if the unpack string is singular
+                if( strlen( $unpack ) == 1 ) {
+
+                    //unpack a single value
+                    $value = \hzphp\Util\Struct::unpack(
+                        $unpack,
+                        $data,
+                        true
+                    );
+                }
+
+                //non-trivial unpack string
+                else {
+
+                    //unpack it all
+                    $value = \hzphp\Util\Struct::unpack( $unpack, $data );
+                }
+            }
+        }
+
+        //return what was extracted
+        return $value;
+    }
+
 
 }
 
@@ -521,9 +609,9 @@ if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
     $data = '';
     for( $i = 0; $i < 20; ++$i ) {
         if( ( $i % 3 ) == 0 ) {
-            $data .= pack( 'LLLL', 48, 16, $i, $i + 1024 );
+            $data .= pack( 'LLLL', 48, 8, $i, $i + 1024 );
         }
-        $data .= pack( 'LLL', 64, 12, $i );
+        $data .= pack( 'LLL', 64, 4, $i );
     }
 
     //write test data to temp file, and rewind file position
@@ -533,7 +621,9 @@ if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
     //define some scanning parameters
     $params = [
         'ident' => '((var,0,L),64)',    //match all records starting with 64
-        'step'  => '(var,4,L)',         //record lengths are 4 bytes in
+        'step'  => '(8,(var,4,L))',     //record lengths are 4 bytes in
+                                        //the extracted length indicates the
+                                        //size of record less 8 header bytes
         'part'  => '(0,null)',          //extract entire record contents
         'slice' => '(1,null,3)'         //report every 3rd starting at 2nd
     ];
