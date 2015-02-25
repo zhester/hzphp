@@ -52,6 +52,63 @@ class StreamIO {
     Public Methods
     ------------------------------------------------------------------------*/
 
+    /**
+     * Safely create a StreamIO instance with a lot of flexibility from the
+     * user's persepctive.
+     *
+     * @param target The target file handle, file name, stream-like object,
+     *               or existing StreamIO instance
+     * @param mode   If specifying a file name, use this access mode
+     * @return       A new or existing StreamIO instance
+     * @throws       \RuntimeException if the instance can not be created
+     */
+    public static function createStream( $target, $mode = 'w+' ) {
+
+        //StreamIO instance
+        $instance = null;
+
+        //check for open file handles
+        if(
+            is_resource( $target )
+            &&
+            ( get_resource_type( $target ) == 'stream' )
+        ) {
+            $instance = new \hzphp\IO\StreamIO( $target );
+        }
+
+        //check for objects
+        else if( is_object( $target ) ) {
+
+            //check for existing StreamIO instances
+            if( $target instanceof StreamIO ) {
+                $instance = $target;
+            }
+
+            //check for file-like objects
+            else {
+                //ZIH - not implemented
+                throw new \RuntimeException(
+                    'Stream-like object usage not yet implemented.'
+                );
+            }
+        }
+
+        //check for file names
+        else if( is_string( $target ) ) {
+            $instance = new StreamIO( $target );
+        }
+
+        //nothing left to check
+        else {
+            throw new \RuntimeException(
+                'Unable to use requested target for new StreamIO instance.'
+            );
+        }
+
+        //return the created instance
+        return $instance;
+    }
+
 
     /**
      * StreamIO instance constructor.
@@ -152,6 +209,16 @@ class StreamIO {
         //return the data (or failure)
         return $data;
     }
+
+
+    /**
+     * Flushes the file I/O buffer.
+     *
+     */
+    public function flush() {
+        fflush( $this->stream );
+    }
+
 
 
     /**
