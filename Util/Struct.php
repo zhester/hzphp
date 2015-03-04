@@ -201,6 +201,35 @@ class Struct {
 
 
     /**
+     * Retrieves a (supposedly) very short hex dump for quick display inside
+     * strings.
+     *
+     * @param string The data to convert to hexadecimal as a string
+     * @param chars  Optional output surrounding/delimiting characters
+     * @return       A string of hexadecimal strings
+     */
+    public static function gethexshort( $string, $chars = '{ }' ) {
+        $num_chars = strlen( $chars );
+        if( $num_chars == 0 ) {
+            $chars = [ '', '', '' ];
+        }
+        else if( $num_chars == 1 ) {
+            $chars = [ '', $chars, '' ];
+        }
+        else if( $num_chars == 2 ) {
+            $chars = [ $chars[ 0 ], ' ', $chars[ 1 ] ];
+        }
+        $num_bytes = strlen( $string );
+        $hex = [];
+        for( $i = 0; $i < $num_bytes; ++$i ) {
+            $values = unpack( 'Cbyte', $string[ $i ] );
+            $hex[] = sprintf( '%02X', $values[ 'byte' ] );
+        }
+        return $chars[ 0 ] . implode( $chars[ 1 ], $hex ) . $chars[ 2 ];
+    }
+
+
+    /**
      * Converts a normal pack string into a list of packing specifiers as an
      * array of two-element arrays.  Each nested array contains the packing
      * format specifier and the repetition of that specifier.

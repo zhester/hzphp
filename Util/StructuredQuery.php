@@ -52,7 +52,7 @@ Classes
 /**
  * Implements structured query handling.
  */
-class StructuredQuery {
+class StructuredQuery implements \JsonSerializable {
 
     /*------------------------------------------------------------------------
     Public Properties
@@ -179,6 +179,17 @@ class StructuredQuery {
 
         //return the native data representation as an array or scalar
         return json_decode( $json, true );
+    }
+
+
+    /**
+     * Provides support for JSON encoding of the object via the
+     * JsonSerializable interface.
+     *
+     * @return The data that should be serialized by JSON encoding
+     */
+    public function jsonSerialize() {
+        return $this->data;
     }
 
 

@@ -24,14 +24,80 @@ Classes
 ----------------------------------------------------------------------------*/
 
 /**
+ * A generic interface for event logs.
+ */
+interface IEventLog {
+
+    public function __toString();
+    public function assrt( $assertion, $message );
+    public function commit();
+    public function enable( $enable );
+    public function is_enabled();
+    public function put( $message );
+    public function trace( $message );
+    public function trace_from( $message, $trace );
+
+}
+
+
+/**
+ * Allows a low-resource version of the EventLog interface to be safely
+ * substituted in production code.
+ */
+class DummyLog implements IEventLog {
+
+    /*------------------------------------------------------------------------
+    Public Methods
+    ------------------------------------------------------------------------*/
+
+    /**
+     * Represents the object state as a string.
+     *
+     * @return A string representing the object
+     */
+    public function __toString() { return ''; }
+
+
+    /**
+     * Trap requests for undefined public properties.
+     */
+    public function __isset( $key ) { return false; }
+    public function __get( $key ) { return null; }
+    public function __set( $key, $value ) {}
+
+
+    /**
+     * Support the interface with dummy methods.
+     */
+    public function assrt( $assertion, $message ) {}
+    public function commit() {}
+    public function enable( $enable ) {}
+    public function is_enabled() { return false; }
+    public function put( $message ) {}
+    public function trace( $message ) {}
+    public function trace_from( $message, $trace ) {}
+
+}
+
+
+/**
  * Provides a simple interface to logging events from user code.
  *
  */
-class EventLog {
+class EventLog implements IEventLog {
 
     /*------------------------------------------------------------------------
     Public Properties
     ------------------------------------------------------------------------*/
+
+    //global enable/disable setting for all event logs
+    //  Set to false to only create DummyLog instances.
+    //  Set to true to allow normal EventLog instances (each can be
+    //  independently enabled/disabled).
+    public static $create = true;
+
+    //use this directory for relative file paths (when using file names)
+    public static $logdir = '__TEMP__';
 
     //amount of path (number of directories) to log before file name paths
     public $dirnames = 2;
@@ -63,44 +129,25 @@ class EventLog {
     ------------------------------------------------------------------------*/
 
     /**
-     * EventLog constructor.
+     * Creates an EventLog (or DummyLog) based on the value of
      *
-     * Since this abstraction is intended to allow a global enable flag, there
-     * are a few use-cases to consider when constructing an EventLog instance.
-     * If the log is to be enabled the entire time, it's probably best to set
-     * the `flush` value in the constructor.  This skips memory logging, and
-     * writes directly to the file.  If the log may be disabled in the future
-     * (e.g. to leave user calls in place), do NOT set the `flush` value.
-     * Instead, make all user calls (toggling enable/disable as needed), then
-     * use the `commit()` method to dump the in-memory log to the file.
+     * Factory static method for creating event log instances.  See the
+     * constructor's documentation for more information.
      *
-     * @param log_file The target file resource or name for logging events
-     * @param enable   The initial log enable state
-     * @param flush    Set to enable automatic flushing to the file
+     * @param log_file (see `__construct()`)
+     * @param enable   (see `__construct()`)
+     * @param flush    (see `__construct()`)
+     * @return         A new object implementing the IEventLog interface
      */
-    public function __construct( $log_file, $enable = true, $flush = false ) {
-
-        //set the user's logging target file (resource, name, etc.)
-        $this->file = $log_file;
-
-        //set the initial enable state
-        $this->enable = $enable;
-
-        //set the flush setting
-        $this->flush = $flush;
-
-        //see if the user wants to avoid in-memory logging
-        if( $this->flush == true ) {
-            $this->stream = \hzphp\IO\StreamIO::createStream( $this->file );
+    public static function create_log(
+        $log_file,
+        $enable = true,
+        $flush  = false
+    ) {
+        if( self::$create == true ) {
+            return new EventLog( $log_file, $enable, $flush );
         }
-
-        //the user might mess with the enable setting, set up a memory file
-        else {
-
-            //open a temporary file stream for immediate logging (auto-closes
-            //  when the StreamIO object is garbage-collected)
-            $this->stream = new \hzphp\IO\StreamIO( 'php://temp', 'w+' );
-        }
+        return new DummyLog();
     }
 
 
@@ -131,6 +178,26 @@ class EventLog {
 
 
     /**
+     * Commits the contents of the in-memory log to the user's target file.
+     *
+     */
+    public function commit() {
+
+        //do not commit unless enabled, and not using auto-flush
+        if( ( $this->enable == true ) && ( $this->flush == false ) ) {
+
+            //create a target stream to the user's file
+            $target = \hzphp\IO\StreamIO::createStream( $this->file, 'w' );
+
+            //rewind the in-memory log, and write to the user's file
+            $size = $this->stream->tell();
+            $this->stream->seek( 0, SEEK_SET );
+            $target->write( $this->stream->read( $size ) );
+        }
+    }
+
+
+    /**
      * Enables/disables logging from user code.  Provided to allow user code
      * to maintain use of the logging class/instance within code and globally
      * toggle actual log output.
@@ -143,22 +210,12 @@ class EventLog {
 
 
     /**
-     * Commits the contents of the in-memory log to the user's target file.
+     * Indicates if the log is currently enabled.
      *
+     * @return True if the log is enabled, otherwise false.
      */
-    public function commit() {
-
-        //do not commit unless enabled, and not using auto-flush
-        if( ( $this->enable == true ) && ( $this->flush == false ) ) {
-
-            //create a target stream to the user's file
-            $target = \hzphp\IO\StreamIO::createStream( $this->file );
-
-            //rewind the in-memory log, and write to the user's file
-            $size = $this->stream->tell();
-            $this->stream->seek( 0, SEEK_SET );
-            $target->write( $this->stream->read( $size ) );
-        }
+    public function is_enabled() {
+        return $this->enable;
     }
 
 
@@ -249,6 +306,67 @@ class EventLog {
     /*------------------------------------------------------------------------
     Protected Methods
     ------------------------------------------------------------------------*/
+
+    /**
+     * EventLog constructor.
+     *
+     * Since this abstraction is intended to allow a global enable flag, there
+     * are a few use-cases to consider when constructing an EventLog instance.
+     * If the log is to be enabled the entire time, it's probably best to set
+     * the `flush` value in the constructor.  This skips memory logging, and
+     * writes directly to the file.  If the log may be disabled in the future
+     * (e.g. to leave user calls in place), do NOT set the `flush` value.
+     * Instead, make all user calls (toggling enable/disable as needed), then
+     * use the `commit()` method to dump the in-memory log to the file.
+     *
+     * @param log_file The target file resource or name for logging events
+     * @param enable   The initial log enable state
+     * @param flush    Set to enable automatic flushing to the file
+     */
+    protected function __construct( $log_file, $enable = true, $flush = false ) {
+
+        //set the user's logging target file (resource, name, etc.)
+        $this->file = $log_file;
+
+        //set the initial enable state
+        $this->enable = $enable;
+
+        //set the flush setting
+        $this->flush = $flush;
+
+        //see if the class's logdir property needs to be set up
+        if( self::$logdir == '__TEMP__' ) {
+            $tmpdir = sys_get_temp_dir();
+            self::$logdir = $tmpdir . '/hzphp';
+            if( is_dir( self::$logdir ) == false ) {
+                mkdir( self::$logdir );
+            }
+        }
+
+        //see if the user's logging target appears to be a file name with a
+        //  relative path
+        if( is_string( $this->file ) && ( $this->file[ 0 ] != '/' ) ) {
+
+            //prepend the logging directory to it
+            $this->file = self::$logdir . '/' . $this->file;
+        }
+
+        //see if the user wants to avoid in-memory logging
+        if( $this->flush == true ) {
+            $this->stream = \hzphp\IO\StreamIO::createStream(
+                $this->file, 'w+'
+            );
+        }
+
+        //the user might mess with the enable setting, set up a memory file
+        else {
+
+            //open a temporary file stream for immediate logging (auto-closes
+            //  when the StreamIO object is garbage-collected)
+            $this->stream = new \hzphp\IO\StreamIO( 'php://temp', 'w+' );
+        }
+    }
+
 
     /**
      * Formats message arguments into strings for insertion into the log.
@@ -344,7 +462,7 @@ if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
     $tmp = tmpfile();
 
     //create an event log for basic testing
-    $log = new EventLog( $tmp );
+    $log = EventLog::create_log( $tmp );
 
     //log messages various ways
     $log->put( 'Message A' );
@@ -362,15 +480,20 @@ if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
 
     //dump the temporary file to the output
     $size = ftell( $tmp );
-    rewind( $tmp );
-    echo fread( $tmp, $size );
+    if( $size > 0 ) {
+        rewind( $tmp );
+        echo fread( $tmp, $size );
+    }
+    else {
+        echo "(nothing logged)\n";
+    }
 
     //reset the temporary file
     rewind( $tmp );
     ftruncate( $tmp, 0 );
 
     //create an event log for non-caching testing
-    $log = new EventLog( $tmp, true, true );
+    $log = EventLog::create_log( $tmp, true, true );
 
     //add some entries to the log
     $log->put( 'Message C' );
@@ -378,8 +501,27 @@ if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
 
     //dump the temporary file to the output
     $size = ftell( $tmp );
+    if( $size > 0 ) {
+        rewind( $tmp );
+        echo fread( $tmp, $size );
+    }
+    else {
+        echo "(nothing logged)\n";
+    }
+
+    //test the global disable feature
+    EventLog::$create = false;
     rewind( $tmp );
-    echo fread( $tmp, $size );
+    ftruncate( $tmp, 0 );
+    $log = EventLog::create_log( $tmp, true, true );
+    $log->put( 'Message E' );
+    $size = ftell( $tmp );
+    if( $size == 0 ) {
+        echo "Successfully disabled the event log.\n";
+    }
+    else {
+        echo "Did not disable the event log.\n";
+    }
 
 }
 

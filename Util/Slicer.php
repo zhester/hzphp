@@ -207,7 +207,7 @@ class Slicer {
      * @return A string representing the object
      */
     public function __toString() {
-        return "[{$this->_start}:{$this->_stop}:{$this->_step}";
+        return "[{$this->_start}:{$this->_stop}:{$this->_step}]";
     }
 
 

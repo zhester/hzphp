@@ -62,7 +62,7 @@ class StreamIO {
      * @return       A new or existing StreamIO instance
      * @throws       \RuntimeException if the instance can not be created
      */
-    public static function createStream( $target, $mode = 'w+' ) {
+    public static function createStream( $target, $mode = 'r' ) {
 
         //StreamIO instance
         $instance = null;
@@ -95,7 +95,7 @@ class StreamIO {
 
         //check for file names
         else if( is_string( $target ) ) {
-            $instance = new StreamIO( $target );
+            $instance = new StreamIO( $target, $mode );
         }
 
         //nothing left to check
@@ -129,7 +129,7 @@ class StreamIO {
             $this->filename = $stream;
             $this->stream   = fopen( $stream, $mode );
             if( $this->stream === false ) {
-                throw \RuntimeException( "Unable to open file $stream." );
+                throw new \RuntimeException( "Unable to open file $stream." );
             }
         }
 
@@ -239,9 +239,29 @@ class StreamIO {
     /**
      * Reads data from the file.
      *
+     * @param size The number of bytes to read from the stream.  If negative,
+     *             this will read the remaining contents of the stream.  If
+     *             the size is not specified, the remainder of the file is
+     *             read.
+     * @return     The data read from the stream.  Once the stream has reached
+     *             its end, boolean false is returned.
+     * @throws     RuntimeException if there is an error
      */
-    public function read( $size ) {
-        $data = fread( $this->stream, $size );
+    public function read( $size = -1 ) {
+        if( is_integer( $size ) == false ) {
+            throw new \RunimeException(
+                "Invalid size \"$size\" in call to read()."
+            );
+        }
+        else if( $size < 0 ) {
+            $data = stream_get_contents( $this->stream );
+        }
+        else {
+            $data = fread( $this->stream, $size );
+        }
+        if( $data === false ) {
+            throw new \RuntimeException( 'Error reading from stream.' );
+        }
         if( ( $data == '' ) && feof( $this->stream ) ) {
             return false;
         }

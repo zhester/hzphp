@@ -13,23 +13,103 @@ system.  This system deals with the details of how to step through records
 within the file, identify the desired records, and extract parts of each
 record.
 
-Query Components
-----------------
+This system makes the assumption that we are working with files that contain
+sequential units of structured data.  The structure of these units is
+irrelevent.  Each unit of structured data is called a "record".
 
-The query consists of these items:
+To clarify, a _record_ in a given format is the entire contents of a storage
+unit within a file.  This includes any framing, headers, footers, and/or
+content/payload.  Thus, when speaking of offsets into a record, the reference
+is always from the begging of the very first part of the record (usually the
+first byte in a record's header).  This allows all other offsets to work
+without any knowledge of the internal boundaries between parts of the record.
 
-- `ident`: record identification scheme (default: matches all records)
-- `step`: how to navigate between records (default: records are 1 byte long)
-- `part`: what to extract from each record (default: entire record)
-- `slice`: reduce the output to a subset of the final record list (default:
-  send extracted parts of all matching records)
+Record Stepping
+---------------
 
-### Value Extraction
+The foundation of this system is built on the notion of _record stepping_.  In
+order to scan through a file of unknown format, this system must understand
+how to locate the boundaries between records, and _step_ from one record to
+the next.  As an example, a text or CSV file can be considered a format whose
+records are delimited by new-line (`\n`) characters.  Stepping between records
+in those formats is a simple matter of finding the next new-line character.
 
-In order to facilitate records of fixed-length, variable-length, and
-self-terminated, a way to define how to extract information from any part of
-the file is needed.  The specifier is a triplet containing the following
-information:
+In an unknown format, there is often internal information that either delimits
+or explicitly defines the boundaries from one record to the next.  In most
+cases, the length of a record is encoded in a field in a record's header.
+Occasionally, this field is a symbolic reference to a size given in an
+external specification.  Most of the time, however, this is the literal number
+of bytes that are used to represent either the entire record, or some
+(possibly variable) portion of the record.
+
+Currently, this system allows a simple way to define record traversal in terms
+of two pieces of information:
+
+1. The offset into the record from which we will count bytes
+2. The number of bytes from the offset until the end of the record
+
+Thus, the _step_ parameter is made of an _offset_ and a _length_.  If a format
+uses fixed-size records, these can simply be literal values.  If a format uses
+variable-size records, either or both of these can represent a way to read the
+proper values from the record data itself.  This representation is referred to
+here as an "extraction specifier" (see below).
+
+Extraction Specifiers
+---------------------
+
+Any piece of information can be extracted from a record given a three-part
+specifier.  The result of this extraction is typically a string of bytes, but
+the more powerful specifier (`var`) is also able to convert the data it finds
+into a numeric value, and use that for data analysis.
+
+### Self-terminating Records
+
+The simplest formats will typically use a self-terminating record format.  To
+specify how a record terminates itself, two pieces of information can be
+specified:
+
+1. The value of a byte that signals the end of a record
+2. The value of a byte that escapes the end-of-record byte
+
+### Fixed-length Records
+
+Occasionally, a format will contain records of monotonic length.  Again, two
+pieces of information allow extraction of these records:
+
+1. The offset into the record from which the record length is counted (number
+   of bytes)
+2. The length of the record (number of bytes)
+
+### Variable-length Records
+
+Non-trivial formats will usually encode the size of each record (or its
+contents) in a header field of a known position and type.  Two pieces of
+information are needed to traverse each record:
+
+1. The offset into the record where we will find the record's length value
+2. The format of the numeric value that encodes the record's length value
+
+The numeric formats are specified as a single ASCII character that represents
+a primitive numeric data type.  The following should illustrate the typical
+conversions to common C data types.
+
+    c : sint8
+    C : uint8
+    s : sint16 (host byte order)
+    S : uint16 (host byte order)
+    v : uint16 (little endian)
+    l : sint32 (host byte order)
+    L : uint32 (host byte order)
+    V : uint32 (little endian)
+    q : sint64 (host byte order)
+    Q : uint64 (host byte order)
+    P : uint64 (little endian)
+    f : float  (host representation)
+    d : double (host representation)
+
+### Specifiers
+
+Specifiers are given as a triplet with the following fields:
 
 - `class`: one of `fix`, `trm`, or `var`
 - `arg1`:
@@ -37,28 +117,16 @@ information:
     - for `trm` extractors, this is the terminating character
     - for `var` extractors, this is the offset into the record to extract
 - `arg2`:
-    - for `fix` extractors, this is the number of bytes to extract/skip
+    - for `fix` extractors, this is the number of bytes to extract
     - for `trm` extractors, this is the escape character
     - for `var` extractors, this is one of the following type specifiers
 
-    c : sint8
-    C : uint8
-    s : sint16
-    S : uint16
-    l : sint32
-    L : uint32
-    q : sint64
-    Q : uint64
-    f : float
-    d : double
+In a programming language, the triplet is usually an array or list where the
+first item is a string, and the other two items are numbers or characters.
+See below for information about how specifiers are given in a query string.
 
-When specifying an extractor, this is a three-part vector:
-
-    (fix,0,512)
-    (trm,"\n","\\")
-    (var,4,L)
-
-### Record Matching
+Record Matching
+---------------
 
 Matching a record is done by extracting some value from the record, and
 comparing it to a single value, a range of values, or a set of valid values.
@@ -83,7 +151,8 @@ records that have values that are _not_ members of the set), use an uppercase
     (s,3,5,7,11,15)
     (S,1,2,7,127)
 
-### Subset Extraction in Output
+Subset Extraction in Output
+---------------------------
 
 If only a subset of the matching records is required, this can be specified
 using a slice-style vector.
@@ -94,6 +163,9 @@ using a slice-style vector.
 - `stop` is the index of the last record to return (negative indexes are
   relative to the end of the set)
 - `step` is how many records to step over between returned records
+
+Specifying `null` for any of the items in the vector indicates the default
+value.
 
 The default slice (all records) would look like this:
 
@@ -107,14 +179,28 @@ To get the first 100 records:
 
     (0,100)
 
-In Query Parameters
--------------------
+In Query Parameter Strings
+--------------------------
 
-Record identifiers are given with a vector containing two parts.
+This system uses the notion of structured query parameter values.  The intent
+is to allow a compact, string-based notation to represent the entirety of a
+request to scan, extract, combine, and slice data from a file.  To do this,
+four parameter strings that can be used:
 
-    (<extracter>,<match>)
-    ((fix,0,4),abcd)
-    ((var,4,L),(s,128,256))
+- `step`: how to navigate between records (default: records are 1 byte long)
+- `ident`: record identification scheme (default: match all records)
+- `part`: what to extract from each record (default: entire record)
+- `slice`: reduce the output to a subset of the final record list (default:
+  send all matching records)
+
+None of the parameters are required to scan through a file.  However, the
+default behavior is to merely scan the file byte-for-byte and return the whole
+thing.
+
+Each parameter uses its own structure.  The following notation shows how each
+parameter would be given in a query parameter value string.
+
+### `step`
 
 Record steps are given with with a vector containing two parts.
 
@@ -130,28 +216,58 @@ details of the format (such as the length of the header itself).  The offset
 can be dynically determined if we know where to extract it relative to the
 start of the record.
 
+### `ident`
+
+Record identifiers are given with a vector containing two parts.
+
+    (<extracter>,<match>)
+    ((fix,0,4),abcd)
+    ((var,4,L),(s,128,256))
+
+### `part`
+
 Record payloads are given with a vector containing two parts.  Each part may
 be either a number (indicating a fixed offset or length in the record) or an
 extraction specifier (indicating where in the record to find the offset or
-length).  Any permutation of constant and dynamic specifiers is allowed.
+length).
 
     (<offset>,<length>)
     (0,(var,8,L))
     ((var,2,s),48)
     ((var,8,c),(var,9,c))
 
-Slices are given as a slice vector.
+### `slice`
 
-URL-style Queries
------------------
+Slices are given as a slice vector.  See the section above regarding "Subset
+Extraction".
 
-    ident=((var,0,L),2147592789)
-    &
-    step=(8,(var,4,L))
-    &
-    part=(8,4)
-    &
-    slice=(0,100,1)
+### Parameters in a URL
+
+The following shows a few examples of parameters given in a URL GET query.
+
+#### Example 1
+
+Records are variable-length (extracted from a field that counts relative to 8
+bytes into the record).  Only report records where the first 4 bytes encodes a
+32-bit unsigned integer that contains the value 42.  Extract 4 bytes from each
+record starting 8 bytes into the record.  Only report the first 100 matching
+records.
+
+    step=(8,(var,4,L))&ident=((var,0,L),42)&part=(8,4)&slice=(0,100)
+
+#### Example 2
+
+Records are fixed-length, 16 bytes each.  Extract the last 4 bytes of each
+record.
+
+    step=(0,16)&part=(12,4)
+
+#### Example 3
+
+Records are variable-length (extracted from a field that counts relative to 12
+bytes into the record).  Report every third record.
+
+    step=(12,(var,10,S)&slice=(0,null,3)
 
 *****************************************************************************/
 
@@ -179,6 +295,10 @@ class FileScanner {
     /*------------------------------------------------------------------------
     Public Properties
     ------------------------------------------------------------------------*/
+
+    //artificially limit how much of the file is scanned for all instances
+    public static $record_limit = 0;
+    public static $scan_limit   = 0;
 
     //upper limit for record lengths in the stream (16kB)
     public $max_record_length = 16384;
@@ -214,6 +334,9 @@ class FileScanner {
 
     /*======================================================================*/
 
+    //the development event log
+    protected $log = null;
+
     //the StructuredQuery instance that specifies the scan query
     protected $query = null;
 
@@ -225,6 +348,7 @@ class FileScanner {
 
     //file scanning statistics
     protected $stats = [
+        'bytes'    => 0,
         'scanned'  => 0,
         'matched'  => 0,
         'reported' => 0
@@ -270,7 +394,7 @@ class FileScanner {
                     ||
                     ( $num_spec > ( $val[ 0 ] + $val[ 1 ] ) )
                 ) {
-                    throw new RuntimeError(
+                    throw new \RuntimeException(
                         "Invalid scanning specification for $k."
                     );
                 }
@@ -283,6 +407,11 @@ class FileScanner {
         $slicer_class = new \ReflectionClass( '\hzphp\Util\Slicer' );
         $this->slicer = $slicer_class->newInstanceArgs(
             $this->spec[ 'slice' ]
+        );
+
+        //create an event log for development purposes
+        $this->log = \hzphp\Util\EventLog::create_log(
+            'FileScanner.php', true, true
         );
     }
 
@@ -299,11 +428,12 @@ class FileScanner {
      */
     public function extract( $spec, $string ) {
         if( $spec[ 0 ] == 'var' ) {
-            return \hzphp\Util\Struct::unpack(
+            $value = \hzphp\Util\Struct::unpack(
                 $spec[ 2 ],
                 substr( $string, $spec[ 1 ] ),
                 true
             );
+            return $value;
         }
         else if( $spec[ 0 ] == 'fix' ) {
             if( $spec[ 2 ] === null ) {
@@ -340,6 +470,20 @@ class FileScanner {
 
 
     /**
+     * Retrieves internal state information as an associative array.
+     *
+     * @return An associative array of internal state information
+     */
+    public function getInfo() {
+        return [
+            'query' => $this->query,
+            'spec'  => $this->spec,
+            'stats' => $this->stats
+        ];
+    }
+
+
+    /**
      * Retrieves the next record from the file stream.
      *
      * ZIH - does not support `trm` record stepping yet
@@ -355,6 +499,16 @@ class FileScanner {
         //step through each record until we find a match
         while( ( $data = $this->step( $offset, $length ) ) !== false ) {
 
+            //dump raw data to log
+            //$this->log->put( \hzphp\Util\Struct::gethexshort( $data ) );
+
+            //check for artificial limit on fetching records
+            if( self::$record_limit > 0 ) {
+                if( $this->stats[ 'scanned' ] >= self::$record_limit ) {
+                    return false;
+                }
+            }
+
             //increment records scanned counter
             $this->stats[ 'scanned' ] += 1;
 
@@ -367,9 +521,15 @@ class FileScanner {
                 //see if the record is not reportable for the requested subset
                 if( $this->slicer->index() == false ) {
 
+                    //see if the slicer is causing issues
+                    $this->log->put( "slicer miss {$this->slicer->current}" );
+
                     //fetch next matching record
                     continue;
                 }
+
+                //check in on the slicer
+                $this->log->put( "slicer hit {$this->slicer->current}" );
 
                 //reporting record, increment report counter
                 $this->stats[ 'reported' ] += 1;
@@ -467,6 +627,11 @@ class FileScanner {
             return $result;
         }
 
+        //log non-zero record IDs
+        //if( $value != 0 ) {
+        //    $this->log->put( "matchRecord: $value == $match" );
+        //}
+
         //return the result of direct comparison matching
         return $value == $match;
     }
@@ -496,6 +661,11 @@ class FileScanner {
 
             //extract offset
             $offset = $this->sneak( $offset );
+
+            //check for proper read of offset
+            if( $offset === false ) {
+                return false;
+            }
         }
 
         //check for extraction specifier to find length
@@ -509,14 +679,50 @@ class FileScanner {
             //extract length
             $length = $this->sneak( $length );
 
+            //check for proper read of length
+            if( $length === false ) {
+                return false;
+            }
+
             //sanity check the extracted length
             if( $length > $this->max_record_length ) {
                 return false;
             }
         }
 
-        //fetch the record data, and return it
-        return $this->streamio->read( $offset + $length );
+        //calculate the total read length for the record
+        $read_length = $offset + $length;
+
+        //see if reading this will put us past our limit
+        if( self::$scan_limit > 0 ) {
+            $next_read = $this->stats[ 'bytes' ] + $read_length;
+            if( $next_read > self::$scan_limit ) {
+                return false;
+            }
+        }
+
+        //gather some information and format a log message
+        if( $this->log->is_enabled() ) {
+            $position = $this->streamio->tell();
+            $message = "reading $read_length at $position: ";
+        }
+
+        //fetch the record data
+        $data = $this->streamio->read( $read_length );
+
+        //update the amount of data read
+        $this->stats[ 'bytes' ] += strlen( $data );
+
+        //log diagnostic information
+        if( $this->log->is_enabled() ) {
+            $message .= \hzphp\Util\Struct::gethexshort(
+                substr( $data, 0, 8 )
+            );
+            $this->log->put( $message );
+        }
+
+        //return the data
+        return $data;
     }
 
 
