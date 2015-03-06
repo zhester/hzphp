@@ -92,6 +92,16 @@ class Table {
 
 
     /**
+     * Represents the instance as the name of the table.
+     *
+     * @return The name of the table as a string
+     */
+    public function __toString() {
+        return $this->name;
+    }
+
+
+    /**
      *  Returns an array of table Column objects.
      *
      *  @return An array of Column objects for the columns in this table
