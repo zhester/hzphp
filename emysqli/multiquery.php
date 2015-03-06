@@ -67,12 +67,13 @@ class multiquery {
 
 
     /**
-     *  Adds a query to the execution list.
+     * Adds a query to the execution list.
      *
-     *  @param query  The query to add.  This may either be an instance of the
-     *                emysqli\query class or a string containing a query.
-     *  @param report If specified, results are reported and identified with
-     *                the value (usually a string) given.
+     * @param query  The query to add.  This may either be an instance of the
+     *               emysqli\query class or a string containing a query.
+     * @param report If specified, results are reported and identified with
+     *               the value (usually a string) given.
+     * @return       The query object that was added
      */
     public function add_query( $query, $report = null ) {
 
@@ -81,17 +82,17 @@ class multiquery {
             $this->queries[] = $query;
         }
 
-        //add a query string to the list
+        //add a query from a string to the list
         else {
-            $q = new query( $this->db, $query );
-            $this->queries[] = $q;
+            $query = $this->db->create_query( $query );
+            $this->queries[] = $query;
         }
 
         //push the possible report request to the list of reports
         $this->reports[] = $report;
 
         //return the query that was added
-        return $q;
+        return $query;
     }
 
 
@@ -163,12 +164,24 @@ class multiquery {
      *  @param callback A callable entity to call for each query as its
      *                  results become available.  The results object is
      *                  passed to the callback.
+     *                  If no callback is provided, a multiresult instance is
+     *                  returned with all labeled reports.
      *  @throws MultiQueryException
      *                  1. if there are no queries to execute
      *                  2. if a query fails on the DBMS host
      *                  3. if a report is requested, but there are no results
      */
-    public function execute( $callback, $abort_on_fail = false ) {
+    public function execute( $callback = null, $abort_on_fail = false ) {
+
+        //see if the user wants us to supply a multiresult object
+        if( $callback === null ) {
+            $multiresult = new multiresult();
+            $callback = [ $multiresult, 'handle_result' ];
+            $return = $multiresult;
+        }
+        else {
+            $return = null;
+        }
 
         //determine number of queries that will be executed
         $num = count( $this->queries );
@@ -199,7 +212,11 @@ class multiquery {
 
             //does this result need to be reported?
             if( $this->reports[ $i ] !== null ) {
-                call_user_func( $callback, $result, $this->reports[ $i ] );
+                call_user_func(
+                    $callback,
+                    new result( $result ),
+                    $this->reports[ $i ]
+                );
             }
 
             //see if there are more results
@@ -216,6 +233,9 @@ class multiquery {
                 );
             }
         }
+
+        //return a multiresult (if requested) or null when finished
+        return $return;
     }
 
 
@@ -237,6 +257,50 @@ Testing
 ----------------------------------------------------------------------------*/
 
 if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
-    //$mq = new multiquery();
+
+    header( 'Content-Type: text/plain; charset=utf-8' );
+
+    require __DIR__ . '/test_setup.php';
+
+    $table = 'hzphp_test';
+
+    $db = new emysqli();
+
+    $result = check_test_database( $db );
+    if( $result === false ) {
+        echo "Error checking test database: {$db->error}";
+        exit();
+    }
+
+    $mq = $db->create_multiquery();
+
+    $mq->add_query( "set @table := '$table';" );
+    $qr = new query(
+        $db,
+        "set @query := concat(
+            'select id,name from ',
+            @table,
+            ' limit ?'
+        );",
+        'i',
+        [ 2 ]
+    );
+    $mq->add_query( $qr );
+    $mq->add_query( "prepare test_statement from @query" );
+    $mq->add_query( "execute test_statement", 'report' );
+    $mq->add_query( "deallocate prepare test_statement" );
+
+    echo "Testing function callback:\n";
+    $mq->execute(
+        function( $result, $report ) {
+            echo "Reporting: $report\n";
+            echo json_encode( $result, JSON_PRETTY_PRINT ) . "\n\n";
+        }
+    );
+
+    echo "Testing automatic multiresult return:\n";
+    $mr = $mq->execute();
+    echo json_encode( $mr, JSON_PRETTY_PRINT ) . "\n\n";
+
 }
 

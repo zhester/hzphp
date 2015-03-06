@@ -323,6 +323,12 @@ if( realpath( $_SERVER[ 'SCRIPT_FILENAME' ] ) == __FILE__ ) {
 
     $db = new emysqli();
 
+    $result = check_test_database( $db );
+    if( $result === false ) {
+        echo "Error checking test database: {$db->error}";
+        exit();
+    }
+
     $db_result = $db->query( "select * from $table" );
 
     $result = new result( $db_result );

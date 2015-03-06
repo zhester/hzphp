@@ -1,16 +1,29 @@
 <?php
+/*****************************************************************************
+
+Extended `mysqli` Interface
+===========================
+
+
+*****************************************************************************/
 
 /*----------------------------------------------------------------------------
-Namespace
+Default Namespace
 ----------------------------------------------------------------------------*/
 
 namespace hzphp\emysqli;
 
-
 /*----------------------------------------------------------------------------
-Exceptions
+Dependencies
 ----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------
+Classes
+----------------------------------------------------------------------------*/
+
+/**
+ * Generic exception thrown when working with `emysqli`
+ */
 class DatabaseException extends \RuntimeException {}
 
 
@@ -40,7 +53,11 @@ class emysqli extends \mysqli {
     ------------------------------------------------------------------------*/
 
     /**
-     * Instantiates a database interface object.
+     * emysqli Constructor
+     *
+     * Initializes the object, and initiates a connection to the DBMS host.
+     * The host information and credentials may be passed to the constructor,
+     * or may also be `define()`d as PHP literals.
      *
      * @param host     Host name of the DBMS host
      * @param username User name for the DBMS credentials
@@ -98,9 +115,6 @@ class emysqli extends \mysqli {
      * @param ignore A list of fields that should be ignored, if given
      * @return       The insertion ID of the new record in the table
      * @throws       DatabaseException
-     *                   1. if the query fails mysqli::prepare()
-     *                   2. if the parameters can be bound
-     *                   3. if the query fails execution
      */
     public function auto_insert( $table, $values, $ignore = null ) {
 
@@ -116,8 +130,11 @@ class emysqli extends \mysqli {
         $mq->setIgnoredFields( $ignore );
         list( $query, $types, $vlist ) = $mq->getInsert();
 
+        //create a query object
+        $qr = $this->create_query( $query, $types, $vlist );
+
         //prepare a query statement
-        $statement = $this->create_statement( $query, $types, $vlist );
+        $statement = $this->create_statement( $qr );
 
         //fetch the ID of the inserted record
         $id = $statement->insert_id;
@@ -201,8 +218,11 @@ class emysqli extends \mysqli {
         $mq->setIgnoredFields( $ignore );
         list( $query, $types, $vlist ) = $mq->getUpdate( $id );
 
+        //create a query object
+        $qr = $this->create_query( $query, $types, $vlist );
+
         //prepare a query statement
-        $statement = $this->create_statement( $query, $types, $vlist );
+        $statement = $this->create_statement( $qr );
 
         //release the statement's resources
         $statement->close();
@@ -224,6 +244,19 @@ class emysqli extends \mysqli {
 
 
     /**
+     * Properly creates a query object using the current mysqli connection.
+     *
+     * @param query The query string to perform
+     * @param types The prepared type string /[idsb]+/
+     * @param vlist The list of values to substitute in the query
+     * @return      A query object
+     */
+    public function create_query( $query, $types = null, $vlist = null ) {
+        return new query( $this, $query, $types, $vlist );
+    }
+
+
+    /**
      * Performs a prepared query that expects to retrieve one record, and
      * returns the result as an associative array.
      *
@@ -236,8 +269,15 @@ class emysqli extends \mysqli {
      */
     public function fetch_one_assoc( $query, $types = null, $vlist = null ) {
 
+        //see if the user passed a query that isn't a query instance
+        if( ( $query instanceof query ) == false ) {
+
+            //create the query instance
+            $query = $this->create_query( $query, $types, $vlist );
+        }
+
         //create the statement for this query
-        $statement = $this->create_statement( $query, $types, $vlist );
+        $statement = $this->create_statement( $query );
 
         //get the result object for the statement
         $result = $statement->get_result();
@@ -272,8 +312,15 @@ class emysqli extends \mysqli {
      */
     public function fetch_result( $query, $types = null, $vlist = null ) {
 
+        //see if the user passed a query that isn't a query instance
+        if( ( $query instanceof query ) == false ) {
+
+            //create the query instance
+            $query = $this->create_query( $query, $types, $vlist );
+        }
+
         //create the statement for this query
-        $statement = $this->create_statement( $query, $types, $vlist );
+        $statement = $this->create_statement( $query );
 
         //create a new result instance for this statement
         $result = new result( $statement );
@@ -309,8 +356,15 @@ class emysqli extends \mysqli {
      */
     public function send_query( $query, $types = null, $vlist = null ) {
 
+        //see if the user passed a query that isn't a query instance
+        if( ( $query instanceof query ) == false ) {
+
+            //create the query instance
+            $query = $this->create_query( $query, $types, $vlist );
+        }
+
         //create the statement
-        $statement = $this->create_statement( $query, $types, $vlist );
+        $statement = $this->create_statement( $query );
 
         //free the statement
         $statement->close();
@@ -326,35 +380,51 @@ class emysqli extends \mysqli {
      * The prepared statement is executed, and ready for error checking and/or
      * results retrieval.
      *
-     * @param query The query to perform
-     * @param types The prepared type string /[idsb]+/
-     * @param vlist The list of values to substitute in the query
+     * @param query The query to perform (hzphp\emysqli\query)
      * @return      A result object for retrieving the query results
      * @throws      DatabaseException
      */
-    protected function create_statement(
-        $query,
-        $types = null,
-        $vlist = null
-    ) {
+    protected function create_statement( $query ) {
+
+        //see if a plain string was passed for the statement
+        if( is_string( $query ) ) {
+            $using_query  = false;
+            $query_string = $query;
+        }
+
+        //see if we can provide a bind-able query
+        else if( isset( $query->query ) ) {
+            $using_query  = true;
+            $query_string = $query->query;
+        }
+
+        //convert other things to a string that we can use in the statement
+        else {
+            $using_query  = false;
+            $query_string = strval( $query );
+        }
 
         //attempt to create the statement instance
-        $statement = $this->prepare( $query );
+        $statement = $this->prepare( $query_string );
         if( $this->errno != 0 ) {
             throw new DatabaseException( 'Prepare failed: ' . $this->error );
         }
 
         //check for query parameters
-        if( $types != null ) {
+        if( ( $using_query == true )
+         && isset( $query->types )
+         && ( strlen( $query->types ) > 0 )
+        ) {
 
-            //make an array creating (or adding) references to the value list
-            $bp_args = [ $types ];
-            foreach( $vlist as $i => $v ) {
-                $bp_args[] = &$vlist[ $i ];
+            //make an array creating references to the values array
+            $values    = $query->values;
+            $arguments = [ $query->types ];
+            foreach( $values as $index => $value ) {
+                $arguments[] = &$values[ $index ];
             }
 
             //bind the parameters to the statement
-            call_user_func_array( [ $statement, 'bind_param' ], $bp_args );
+            call_user_func_array( [ $statement, 'bind_param' ], $arguments );
             if( $this->errno != 0 ) {
                 throw new DatabaseException(
                     'Bind parameters failed: ' . $this->error
@@ -436,7 +506,11 @@ class emysqli extends \mysqli {
 
 
 /*----------------------------------------------------------------------------
-Testing
+Functions
+----------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------
+Execution
 ----------------------------------------------------------------------------*/
 
 if( realpath( $_SERVER[ 'SCRIPT_FILENAME' ] ) == __FILE__ ) {
@@ -466,6 +540,13 @@ if( realpath( $_SERVER[ 'SCRIPT_FILENAME' ] ) == __FILE__ ) {
     $record = $db->fetch_one_assoc(
         "select * from $table where id = ?", 'i', [ 2 ]
     );
+    echo json_encode( $record, JSON_PRETTY_PRINT );
+    echo "\n";
+    echo "emysqli::fetch_one_assoc() (query object)\n";
+    $query = $db->create_query(
+        "select * from $table where id = ?", 'i', [ 3 ]
+    );
+    $record = $db->fetch_one_assoc( $query );
     echo json_encode( $record, JSON_PRETTY_PRINT );
     echo "\n\n";
 
