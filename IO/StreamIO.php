@@ -356,7 +356,7 @@ class StreamIO {
      * @return       True on success, false on failure/error
      */
     public function seek( $bytes, $whence = SEEK_SET ) {
-        $result = fseek( $this->stream, $bytes, $whence );
+        $result = fseek64( $this->stream, $bytes, $whence );
         return $result == 0;
     }
 
@@ -418,6 +418,47 @@ class StreamIO {
 /*----------------------------------------------------------------------------
 Functions
 ----------------------------------------------------------------------------*/
+
+/**
+ * Works around fseek()'s inability to handle 64-bit offsets in one call.
+ *
+ * Note: This does not work on 32-bit systems due to fseek()'s internal
+ * file position type.
+ *
+ * @param fh     The file handle to upon which to seek
+ * @param offset The offset into the file as a string (allows offset > 2G)
+ * @param whence From whence to seek
+ * @return       0 on success, -1 on error
+ */
+function fseek64( $fh, $offset, $whence = SEEK_SET ) {
+
+    //shortcut for sub-2G seeks
+    if( gmp_cmp( PHP_INT_MAX, $offset ) > 0 ) {
+        return fseek( $fh, intval( $offset ), $whence );
+    }
+
+    //move initial file pointer to a known reference position
+    fseek( $fh, 0, $whence );
+
+    //create multiprecision resource for the large offset string
+    $remaining_offset = gmp_init( $offset );
+
+    //set the seek jump distance
+    $distance = gmp_init( PHP_INT_MAX );
+
+    //seek until the remaining offset is <= the jump distance
+    while( gmp_cmp( $remaining_offset, $distance ) > 0 ) {
+        $result = fseek( $fh, gmp_intval( $distance ), SEEK_CUR );
+        if( $result != 0 ) {
+            return $result;
+        }
+        $remaining_offset = gmp_sub( $remaining_offset, $distance );
+    }
+
+    //the remaining offset can now be reached
+    return fseek( $fh, gmp_intval( $remaining_offset ), SEEK_CUR );
+}
+
 
 /*----------------------------------------------------------------------------
 Execution
