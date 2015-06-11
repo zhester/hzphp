@@ -194,7 +194,7 @@ class emysqli extends \mysqli {
             }
 
             //if the record doesn't have the column, the query is messed up
-            if( isset( $record[ $key ] ) == false ) {
+            if( array_key_exists( $key, $record ) == false ) {
                 throw new DatabaseException(
                     "Unable to update record with unknown column `$key`."
                 );
