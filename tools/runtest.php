@@ -35,10 +35,13 @@ if( isset( $_GET[ 'unit' ] ) == true ) {
         $mname  = $matches[ 1 ];
         $tname  = $matches[ 2 ];
         $module = "$hzphp_path/$mname";
+        $target = "$module/$tname.php";
         $test   = "$unit_test_path/$mname/$tname.php";
 
         if( ( file_exists( $module ) == true )
          && (      is_dir( $module ) == true )
+         && ( file_exists( $target ) == true )
+         && (     is_file( $target ) == true )
          && ( file_exists( $test   ) == true ) ) {
 
             $has_test = true;
