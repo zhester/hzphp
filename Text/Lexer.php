@@ -97,8 +97,9 @@ class Lexer implements \Iterator {
      * @param tspecs An array of two-element arrays that specify token
      *               identifiers and their regular expressions for matching
      *               tokens
+     * @param mods   Pattern modifiers for the parsing pattern
      */
-    public function __construct( $stream, $tspecs = null ) {
+    public function __construct( $stream, $tspecs = null, $mods = 'mS' ) {
 
         //set the input file stream
         $this->stream = $stream;
@@ -110,7 +111,7 @@ class Lexer implements \Iterator {
 
         //default to parsing around whitespace
         else {
-            $this->tspecs = [ [ 'TOKEN', '/\\S+/' ] ];
+            $this->tspecs = [ [ 'TOKEN', '\\S+' ] ];
         }
 
         //construct the regular expression from the token specifications
@@ -118,7 +119,7 @@ class Lexer implements \Iterator {
         foreach( $this->tspecs as list( $key, $frag ) ) {
             $frags[] = "(?P<$key>$frag)";
         }
-        $this->pattern = '/' . implode( '|', $frags ) . '/mS';
+        $this->pattern = '/' . implode( '|', $frags ) . "/$mods";
     }
 
 
@@ -129,6 +130,17 @@ class Lexer implements \Iterator {
      */
     public function current() {
         return $this->token;
+    }
+
+
+    /**
+     * Retrieve the remaining part of the stream without invoking the parser.
+     *
+     * @return The end of the stream as a string.
+     */
+    public function get_tail() {
+        $this->is_complete = true;
+        return substr( $this->subject, $this->offset );
     }
 
 
