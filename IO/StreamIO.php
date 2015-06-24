@@ -1,56 +1,45 @@
 <?php
-/*****************************************************************************
+/****************************************************************************
 
 File/Stream I/O Abstraction
 
 This started as a way to more easily add functionality to reading highly-
 specified parts of files.  However, it quickly became easy to just wrap a
-few of the normal file I/O functions, and provide a solid file handling object.
+few of the normal file I/O functions, and provide a solid file handling
+object.
 
-*****************************************************************************/
+****************************************************************************/
 
-/*----------------------------------------------------------------------------
+/*---------------------------------------------------------------------------
 Default Namespace
-----------------------------------------------------------------------------*/
+---------------------------------------------------------------------------*/
 
 namespace hzphp\IO;
 
-/*----------------------------------------------------------------------------
+/*---------------------------------------------------------------------------
 Dependencies
-----------------------------------------------------------------------------*/
+---------------------------------------------------------------------------*/
 
-/*----------------------------------------------------------------------------
+/*---------------------------------------------------------------------------
 Classes
-----------------------------------------------------------------------------*/
-
+---------------------------------------------------------------------------*/
 
 /**
  * Abstracts file/stream I/O.
  */
 class StreamIO {
 
-    /*------------------------------------------------------------------------
-    Public Properties
-    ------------------------------------------------------------------------*/
-
-    /*------------------------------------------------------------------------
+    /*-----------------------------------------------------------------------
     Protected Properties
-    ------------------------------------------------------------------------*/
+    -----------------------------------------------------------------------*/
 
-    //user file's name
-    protected $filename = null;
-
-    //file stream handle
-    protected $stream = null;
+    protected $filename = null; //user file's name
+    protected $stream   = null; //file stream handle
 
 
-    /*------------------------------------------------------------------------
-    Private Properties
-    ------------------------------------------------------------------------*/
-
-    /*------------------------------------------------------------------------
+    /*-----------------------------------------------------------------------
     Public Methods
-    ------------------------------------------------------------------------*/
+    -----------------------------------------------------------------------*/
 
     /**
      * Safely create a StreamIO instance with a lot of flexibility from the
@@ -139,6 +128,7 @@ class StreamIO {
         }
     }
 
+
     /**
      * StreamIO instance desctructor.
      *
@@ -152,7 +142,6 @@ class StreamIO {
             $this->close();
         }
     }
-
 
 
     /**
@@ -218,7 +207,6 @@ class StreamIO {
     public function flush() {
         fflush( $this->stream );
     }
-
 
 
     /**
@@ -404,20 +392,12 @@ class StreamIO {
         return $result;
     }
 
-
-    /*------------------------------------------------------------------------
-    Protected Methods
-    ------------------------------------------------------------------------*/
-
-    /*------------------------------------------------------------------------
-    Private Methods
-    ------------------------------------------------------------------------*/
-
 }
 
-/*----------------------------------------------------------------------------
+
+/*---------------------------------------------------------------------------
 Functions
-----------------------------------------------------------------------------*/
+---------------------------------------------------------------------------*/
 
 /**
  * Works around fseek()'s inability to handle 64-bit offsets in one call.
@@ -457,66 +437,5 @@ function fseek64( $fh, $offset, $whence = SEEK_SET ) {
 
     //the remaining offset can now be reached
     return fseek( $fh, gmp_intval( $remaining_offset ), SEEK_CUR );
-}
-
-
-/*----------------------------------------------------------------------------
-Execution
-----------------------------------------------------------------------------*/
-
-if( $_SERVER[ 'SCRIPT_FILENAME' ] == __FILE__ ) {
-
-    header( 'Content-Type: text/plain; charset=utf-8' );
-
-    require __DIR__ . '/../tools/loader.php';
-
-    //open temporary file for testing
-    $file = tmpfile();
-
-    //pack some binary data for testing
-    $data = pack( 'LLLLCCS', 42, 26, 12345, 8192, 16, 255, 32767 );
-
-    //write the data, and reset the file position
-    fwrite( $file, $data );
-    rewind( $file );
-
-    //set up a new `StreamIO` object to extract data from the file
-    $si = new StreamIO( $file );
-
-    //extract a single field (advances the file position)
-    $data = $si->extract( 4, 4 );
-    echo "Testing `extract()`\n";
-    print_r( unpack( 'Lvalue', $data ) );
-
-    //change the field we just read
-    $si->seek( -4, SEEK_CUR );
-    $si->load( 'L', [ 53 ] );
-
-    //read it again
-    $si->seek( -4, SEEK_CUR );
-    $data = $si->extract( 0, 4 );
-    echo "Testing `load()`\n";
-    print_r( unpack( 'Lvalue', $data ) );
-
-    //extract a number of fields, and convert to native types
-    $data = $si->unload( 'LLCCS' );
-    echo "Testing `unload()`\n";
-    print_r( $data );
-
-    //replace the file's contents with a few lines of text
-    rewind( $file );
-    fwrite( $file, "line 1\nline \\\\ 2\nline \\\n 3\nlast \\\t line\n" );
-    rewind( $file );
-
-    //use the `readterm()` method to extract each line
-    $lines = [];
-    while( ( $line = $si->readterm() ) !== false ) {
-        $lines[] = str_replace( "\n", '{NL}', $line );
-    }
-    echo "Testing `readterm()`\n";
-    print_r( $lines );
-
-    //close the temporary file (PHP will automatically unlink it)
-    fclose( $file );
 }
 
