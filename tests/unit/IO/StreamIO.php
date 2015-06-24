@@ -106,13 +106,31 @@ class StreamIO extends hzphp\Test\UnitTest {
 
         fclose( $file );
 
-        $report->heading( 'Evaluate PHP\'s `fseek()` for 64-bit Support' );
+        $report->heading( 'Perform 64-bit Support Tests' );
 
         $report->step( 'Check PHP\'s integer width.' );
         $verify->int( 8, PHP_INT_SIZE );
 
-        $report->step( 'Open the `/dev/zero` file.' );
-        $zero = fopen( '/dev/zero', 'rb' );
+        //check for reasonable `/dev/zero` behavior
+        $filename = '/dev/zero';
+        $zero     = fopen( $filename, 'rb' );
+        fseek( $zero, 10, SEEK_SET );
+        if( ftell( $zero ) != 10 ) {
+            fclose( $zero );
+            //create a temporary 2GB + 8kB file
+            $filename = tempnam( '/tmp', 'hzphp_streamio_test_' );
+            $blocks   = ( ( 1024 * 1024 * 1024 * 2 ) + 8192 ) / 4096;
+            exec( "dd if=/dev/zero of=$filename count=0 bs=4k seek=$blocks" );
+            $zero = fopen( $filename, 'rb' );
+        }
+        else {
+            fseek( $zero, 0, SEEK_SET );
+        }
+
+        //step report is out-of-order so we can get the file name
+        $report->step( "Open `$filename`." );
+
+        $report->section( 'Evaluate PHP\'s `fseek()` for 64-bit Support' );
 
         $report->step( 'Verify file is at position 0.' );
         $verify->int( 0, ftell( $zero ) );
@@ -136,7 +154,37 @@ class StreamIO extends hzphp\Test\UnitTest {
         $report->step( 'Verify we have reached 2G + 1.' );
         $verify->int( $offset + 2, ftell( $zero ) );
 
+        $report->section( 'Evaluate Custom `fseek64()` Support' );
+
+        hzphp\IO\fseek64( $zero, 0, SEEK_SET );
+
+        $report->step( 'Verify file is at position 0.' );
+        $verify->int( 0, ftell( $zero ) );
+
+        $report->step( 'Seek to the 2GB boundary.' );
+        $offset = ( 1024 * 1024 * 1024 * 2 ) - 1;
+        hzphp\IO\fseek64( $zero, $offset, SEEK_SET );
+
+        $report->step( 'Verify we have reached 2G - 1.' );
+        $verify->int( $offset, ftell( $zero ) );
+
+        $report->step( 'Seek ahead one byte.' );
+        hzphp\IO\fseek64( $zero, 1, SEEK_CUR );
+
+        $report->step( 'Verify we have reached 2G.' );
+        $verify->int( $offset + 1, ftell( $zero ) );
+
+        $report->step( 'Seek ahead one byte.' );
+        hzphp\IO\fseek64( $zero, 1, SEEK_CUR );
+
+        $report->step( 'Verify we have reached 2G + 1.' );
+        $verify->int( $offset + 2, ftell( $zero ) );
+
         fclose( $zero );
+
+        if( $filename != '/dev/zero' ) {
+            unlink( $filename );
+        }
 
     }
 
