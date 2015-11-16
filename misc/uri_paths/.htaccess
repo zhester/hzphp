@@ -1,0 +1,30 @@
+<IfModule rewrite_module>
+
+    # Enable rewriting.
+    RewriteEngine On
+
+    # Fix requests with a leader "www" subdomain.
+    RewriteCond %{HTTP_HOST} ^www\.(.+)$
+    RewriteRule (.*) http://%1/$1 [R=301,L]
+
+    # Match any requests for non-existant files or directories.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Rewrite request into index handler.
+    RewriteRule ^(.*)$ index.php [L]
+
+</IfModule>
+
+<IfModule php5_module>
+
+    # Enable PHP error reporting/logging.
+    php_value error_reporting -1
+    php_flag display_startup_errors on
+    php_flag display_errors on
+    php_flag html_errors off
+    #php_flag log_errors on
+    #php_value error_log /www/hzian.com/php_temp_errors.log
+
+</IfModule>
+
